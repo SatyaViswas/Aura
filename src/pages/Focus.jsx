@@ -1,0 +1,152 @@
+import React, { useState, useEffect, useRef } from 'react';
+import useHealthStore from '../store/healthStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, RotateCcw, Check, Plus } from 'lucide-react';
+
+const Focus = () => {
+  const addFocusTime = useHealthStore((state) => state.addFocusTime);
+  
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isActive, setIsActive] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    // Basic fallback alert sound
+    audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
+  }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+    } else if (isActive && timeLeft === 0) {
+      clearInterval(interval);
+      setIsActive(false);
+      addFocusTime(25);
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.log('Audio play blocked:', e));
+      }
+    }
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft, addFocusTime]);
+
+  const toggleTimer = () => setIsActive(!isActive);
+  const resetTimer = () => {
+    setIsActive(false);
+    setTimeLeft(25 * 60);
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleAddTask = (e) => {
+    e.preventDefault();
+    if (newTask.trim()) {
+      setTasks([...tasks, { id: Date.now(), text: newTask.trim(), completed: false }]);
+      setNewTask('');
+    }
+  };
+
+  const toggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const progress = ((25 * 60 - timeLeft) / (25 * 60)) * 100;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+      className="p-6 md:p-10 lg:p-14 max-w-5xl mx-auto space-y-12"
+    >
+      <header className="space-y-2 text-center md:text-left">
+        <h1 className="text-3xl md:text-4xl font-light text-text-primary tracking-tight">Deep Work</h1>
+        <p className="text-text-secondary text-lg font-light">Eliminate distractions. Find flow.</p>
+      </header>
+
+      {/* Countdown Timer Engine */}
+      <section className="bg-surface rounded-[1.5rem] p-12 md:p-20 shadow-natural flex flex-col items-center relative overflow-hidden">
+        {/* Subtle background progress fill */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 bg-alert/30 transition-all duration-1000 ease-linear"
+          style={{ height: `${progress}%` }}
+        />
+        
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="text-[6rem] md:text-[10rem] font-light text-primary tracking-tighter tabular-nums mb-12">
+            {formatTime(timeLeft)}
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={resetTimer}
+              className="p-5 rounded-full bg-background text-text-secondary hover:text-primary hover:bg-alert transition-all shadow-sm"
+              aria-label="Reset Timer"
+            >
+              <RotateCcw className="w-7 h-7" />
+            </button>
+            <button 
+              onClick={toggleTimer}
+              className="p-8 rounded-full bg-primary text-white shadow-[0_0_25px_rgba(74,107,93,0.4)] hover:scale-105 transition-all"
+              aria-label={isActive ? "Pause Timer" : "Start Timer"}
+            >
+              {isActive ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-1" />}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Task Block Grid */}
+      <section className="space-y-8">
+        <h2 className="text-2xl font-light text-text-primary ml-2">Session Intentions</h2>
+        
+        <form onSubmit={handleAddTask} className="flex gap-4">
+          <input
+            type="text"
+            placeholder="What will you accomplish?"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            className="flex-1 px-6 py-5 bg-surface shadow-sm border border-transparent focus:border-alert rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/10 text-text-primary transition-all text-lg font-light"
+          />
+          <button
+            type="submit"
+            className="px-8 py-5 bg-surface text-primary border border-transparent shadow-sm rounded-2xl hover:bg-alert transition-all flex items-center justify-center"
+            disabled={!newTask.trim()}
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </form>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence>
+            {tasks.map(task => (
+              <motion.div
+                key={task.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`flex items-center p-6 rounded-2xl shadow-sm cursor-pointer transition-all ${task.completed ? 'bg-background opacity-60' : 'bg-surface hover:shadow-natural'}`}
+                onClick={() => toggleTask(task.id)}
+              >
+                <div className={`w-7 h-7 rounded-md border flex items-center justify-center mr-5 transition-colors ${task.completed ? 'bg-primary border-primary text-white' : 'border-[#E5E7EB] bg-background text-transparent'}`}>
+                  <Check className="w-4 h-4" />
+                </div>
+                <span className={`text-lg font-light flex-1 ${task.completed ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
+                  {task.text}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </section>
+    </motion.div>
+  );
+};
+
+export default Focus;
