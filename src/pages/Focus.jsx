@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, Check, Plus } from 'lucide-react';
+import { Play, Pause, RotateCcw, Check, Plus, Trash2 } from 'lucide-react';
 
 const Focus = () => {
   const addFocusTime = useHealthStore((state) => state.addFocusTime);
@@ -17,6 +17,49 @@ const Focus = () => {
     audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
   }, []);
 
+  // Initialize tasks from localStorage on mount
+  useEffect(() => {
+    try {
+      const storedTasks = localStorage.getItem('aura_tasks');
+      if (storedTasks) {
+        const parsedTasks = JSON.parse(storedTasks);
+        setTasks(parsedTasks);
+      }
+    } catch (error) {
+      console.log('Error loading tasks from localStorage:', error);
+      setTasks([]);
+    }
+  }, []);
+
+  // Initialize timer state from localStorage on mount
+  useEffect(() => {
+    const storedEndTime = localStorage.getItem('aura_timer_endTimestamp');
+    const storedDuration = localStorage.getItem('aura_timer_duration');
+
+    if (storedEndTime && storedDuration) {
+      const endTimestamp = parseInt(storedEndTime, 10);
+      const now = Date.now();
+      const remainingMs = endTimestamp - now;
+      const remainingSeconds = Math.ceil(remainingMs / 1000);
+
+      if (remainingSeconds > 0) {
+        // Timer is still active, resume it
+        setTimeLeft(remainingSeconds);
+        setIsActive(true);
+      } else {
+        // Timer has expired, trigger completion
+        localStorage.removeItem('aura_timer_endTimestamp');
+        localStorage.removeItem('aura_timer_duration');
+        setTimeLeft(parseInt(storedDuration, 10));
+        setIsActive(false);
+        addFocusTime(25);
+        if (audioRef.current) {
+          audioRef.current.play().catch(e => console.log('Audio play blocked:', e));
+        }
+      }
+    }
+  }, [addFocusTime]);
+
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
@@ -24,6 +67,9 @@ const Focus = () => {
     } else if (isActive && timeLeft === 0) {
       clearInterval(interval);
       setIsActive(false);
+      // Clear localStorage when timer completes
+      localStorage.removeItem('aura_timer_endTimestamp');
+      localStorage.removeItem('aura_timer_duration');
       addFocusTime(25);
       if (audioRef.current) {
         audioRef.current.play().catch(e => console.log('Audio play blocked:', e));
@@ -32,10 +78,28 @@ const Focus = () => {
     return () => clearInterval(interval);
   }, [isActive, timeLeft, addFocusTime]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  const toggleTimer = () => {
+    const newIsActive = !isActive;
+    setIsActive(newIsActive);
+
+    if (newIsActive) {
+      // Save end timestamp to localStorage
+      const endTimestamp = Date.now() + (timeLeft * 1000);
+      localStorage.setItem('aura_timer_endTimestamp', endTimestamp.toString());
+      localStorage.setItem('aura_timer_duration', (25 * 60).toString());
+    } else {
+      // User paused the timer, clear localStorage
+      localStorage.removeItem('aura_timer_endTimestamp');
+      localStorage.removeItem('aura_timer_duration');
+    }
+  };
+
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(25 * 60);
+    // Clear localStorage when resetting
+    localStorage.removeItem('aura_timer_endTimestamp');
+    localStorage.removeItem('aura_timer_duration');
   };
 
   const formatTime = (seconds) => {
@@ -47,13 +111,24 @@ const Focus = () => {
   const handleAddTask = (e) => {
     e.preventDefault();
     if (newTask.trim()) {
-      setTasks([...tasks, { id: Date.now(), text: newTask.trim(), completed: false }]);
+      const updatedTasks = [...tasks, { id: Date.now(), text: newTask.trim(), completed: false }];
+      setTasks(updatedTasks);
+      localStorage.setItem('aura_tasks', JSON.stringify(updatedTasks));
       setNewTask('');
     }
   };
 
   const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    const updatedTasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+    setTasks(updatedTasks);
+    localStorage.setItem('aura_tasks', JSON.stringify(updatedTasks));
+  };
+
+  const deleteTask = (id, e) => {
+    e.stopPropagation();
+    const updatedTasks = tasks.filter(t => t.id !== id);
+    setTasks(updatedTasks);
+    localStorage.setItem('aura_tasks', JSON.stringify(updatedTasks));
   };
 
   const progress = ((25 * 60 - timeLeft) / (25 * 60)) * 100;
@@ -140,6 +215,13 @@ const Focus = () => {
                 <span className={`text-lg font-light flex-1 ${task.completed ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
                   {task.text}
                 </span>
+                <button
+                  onClick={(e) => deleteTask(task.id, e)}
+                  className="ml-4 p-2 text-text-secondary hover:text-alert hover:bg-alert/10 rounded-lg transition-colors"
+                  aria-label="Delete task"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </motion.div>
             ))}
           </AnimatePresence>
