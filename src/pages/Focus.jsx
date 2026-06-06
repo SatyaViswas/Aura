@@ -212,7 +212,7 @@ const Focus = () => {
                 <button
                   key={minutes}
                   onClick={() => handleAddMinutes(minutes)}
-                  className="py-4 px-2 bg-background border border-[#E5E7EB] rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
+                  className="py-4 px-2 bg-background border border-border rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
                 >
                   <Plus className="w-4 h-4" /> {minutes}m
                 </button>
@@ -221,7 +221,7 @@ const Focus = () => {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-[#E5E7EB]" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center">
                 <span className="bg-surface px-4 text-sm text-text-secondary">or custom duration</span>
@@ -234,7 +234,7 @@ const Focus = () => {
                 placeholder="Enter custom minutes"
                 value={customMinutes}
                 onChange={(e) => setCustomMinutes(e.target.value)}
-                className="flex-1 px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                className="flex-1 px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                 min="1"
               />
               <button
@@ -280,7 +280,7 @@ const Focus = () => {
                 className={`flex items-center p-6 rounded-2xl shadow-sm cursor-pointer transition-all ${task.completed ? 'bg-background opacity-60' : 'bg-surface hover:shadow-natural'}`}
                 onClick={() => toggleTask(task.id)}
               >
-                <div className={`w-7 h-7 rounded-md border flex items-center justify-center mr-5 transition-colors ${task.completed ? 'bg-primary border-primary text-white' : 'border-[#E5E7EB] bg-background text-transparent'}`}>
+                <div className={`w-7 h-7 rounded-md border flex items-center justify-center mr-5 transition-colors ${task.completed ? 'bg-primary border-primary text-white' : 'border-border bg-background text-transparent'}`}>
                   <Check className="w-4 h-4" />
                 </div>
                 <span className={`text-lg font-light flex-1 ${task.completed ? 'text-text-secondary line-through' : 'text-text-primary'}`}>

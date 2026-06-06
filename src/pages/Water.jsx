@@ -49,7 +49,7 @@ const Water = () => {
           >
             {/* Background Ring */}
             <circle
-              stroke="#DCE4E0"
+              stroke="var(--color-alert)"
               fill="transparent"
               strokeWidth={stroke}
               r={normalizedRadius}
@@ -58,7 +58,7 @@ const Water = () => {
             />
             {/* Active Progress Ring */}
             <motion.circle
-              stroke="#4A6B5D"
+              stroke="var(--color-primary)"
               fill="transparent"
               strokeWidth={stroke}
               strokeDasharray={circumference + ' ' + circumference}
@@ -86,7 +86,7 @@ const Water = () => {
               <button
                 key={amount}
                 onClick={() => addWater(amount)}
-                className="py-4 px-2 bg-background border border-[#E5E7EB] rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
+                className="py-4 px-2 bg-background border border-border rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
               >
                 <Plus className="w-4 h-4" /> {amount}
               </button>
@@ -95,7 +95,7 @@ const Water = () => {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-[#E5E7EB]" />
+              <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center">
               <span className="bg-surface px-4 text-sm text-text-secondary">or custom amount</span>
@@ -108,7 +108,7 @@ const Water = () => {
               placeholder="Amount in ml"
               value={customAmount}
               onChange={(e) => setCustomAmount(e.target.value)}
-              className="flex-1 px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+              className="flex-1 px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
               min="1"
             />
             <button

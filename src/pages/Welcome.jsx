@@ -32,7 +32,7 @@ const Welcome = () => {
           </div>
 
           {/* 5-Pillar Editorial Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 w-full pt-10 pb-14 border-y border-[#E5E7EB]">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 w-full pt-10 pb-14 border-y border-border">
             <div className="flex flex-col items-center gap-3">
               <Dumbbell className="w-7 h-7 text-primary" strokeWidth={1.5} />
               <h3 className="font-medium text-sm tracking-wider uppercase">Training</h3>
@@ -70,11 +70,11 @@ const Welcome = () => {
       </main>
 
       {/* Footer Connectivity Status Node */}
-      <footer className="w-full p-6 border-t border-[#E5E7EB] bg-surface flex justify-center items-center">
+      <footer className="w-full p-6 border-t border-border bg-surface flex justify-center items-center">
         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium tracking-wide border shadow-sm ${
           isCloudActive 
             ? 'bg-alert text-primary border-primary/20' 
-            : 'bg-background text-text-secondary border-[#E5E7EB]'
+            : 'bg-background text-text-secondary border-border'
         }`}>
           {isCloudActive ? <Cloud className="w-4 h-4" /> : <HardDrive className="w-4 h-4" />}
           {cloudSyncStatus}

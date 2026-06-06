@@ -39,6 +39,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
 
@@ -115,12 +117,12 @@ const AngleDial = ({ angle }) => {
           />
         </svg>
         <div className="z-10 text-center">
-          <span className="text-lg font-light tabular-nums text-[#2A2A2A] leading-none">
+          <span className="text-lg font-light tabular-nums text-text-primary leading-none">
             {Math.round(clamped)}°
           </span>
         </div>
       </div>
-      <p className="text-[10px] uppercase tracking-widest text-[#767676] font-medium">
+      <p className="text-[10px] uppercase tracking-widest text-text-secondary font-medium">
         Joint Angle
       </p>
     </div>
@@ -136,7 +138,7 @@ const WsStatusPill = ({ status }) => {
     [WS_STATUS.CONNECTING]: {
       icon: Loader2,
       label: 'Connecting…',
-      cls: 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]',
+      cls: 'bg-background text-text-secondary border border-border',
       iconCls: 'animate-spin',
     },
     [WS_STATUS.OPEN]: {
@@ -148,7 +150,7 @@ const WsStatusPill = ({ status }) => {
     [WS_STATUS.CLOSED]: {
       icon: WifiOff,
       label: 'Disconnected',
-      cls: 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]',
+      cls: 'bg-background text-text-secondary border border-border',
       iconCls: '',
     },
     [WS_STATUS.ERROR]: {
@@ -205,6 +207,10 @@ const PoseAnalyzer = ({
   const [stage, setStage] = useState('—');
   const [feedback, setFeedback] = useState('Align your body in frame and begin the exercise.');
   const [angle, setAngle] = useState(0);
+
+  // Voice Assistant state
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const lastSpokenFeedbackRef = useRef('');
 
   // Session completion
   const [sessionDone, setSessionDone] = useState(false);
@@ -493,6 +499,10 @@ const PoseAnalyzer = ({
       landmarkerRef.current.close();
       landmarkerRef.current = null;
     }
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -529,7 +539,26 @@ const PoseAnalyzer = ({
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 8 · Session completion handler
+  // 8 · Voice Assistant Effect
+  // ─────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (
+      isVoiceEnabled &&
+      feedback &&
+      feedback !== lastSpokenFeedbackRef.current
+    ) {
+      window.speechSynthesis.cancel();
+      lastSpokenFeedbackRef.current = feedback;
+      const utterance = new SpeechSynthesisUtterance(feedback);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [feedback, isVoiceEnabled]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 9 · Session completion handler
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleEndSession = useCallback(() => {
@@ -556,15 +585,15 @@ const PoseAnalyzer = ({
   const isBooting = isModelLoading || isCameraLoading;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#FBFBF9] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
 
       {/* ── Top chrome bar ─────────────────────────────────────────────────── */}
-      <header className="shrink-0 px-6 py-4 flex items-center justify-between bg-white border-b border-black/[0.05] shadow-[0_2px_20px_-4px_rgba(42,42,42,0.04)] z-20">
+      <header className="shrink-0 px-6 py-4 flex items-center justify-between bg-surface border-b border-border shadow-[0_2px_20px_-4px_rgba(42,42,42,0.04)] z-20">
         <div className="flex flex-col">
-          <p className="text-[10px] text-[#767676] uppercase tracking-widest font-medium">
+          <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
             Live Session
           </p>
-          <h2 className="text-lg font-light text-[#2A2A2A] leading-tight">
+          <h2 className="text-lg font-light text-text-primary leading-tight">
             {exerciseName}
           </h2>
         </div>
@@ -573,8 +602,23 @@ const PoseAnalyzer = ({
           <WsStatusPill status={gradientStatus} />
 
           <button
+            onClick={() => {
+              if (isVoiceEnabled) window.speechSynthesis.cancel();
+              setIsVoiceEnabled((prev) => !prev);
+            }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm border ${
+              isVoiceEnabled
+                ? 'bg-[#DCE4E0] text-[#4A6B5D] border-[#4A6B5D]/20'
+                : 'bg-background text-text-secondary border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20'
+            }`}
+          >
+            {isVoiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {isVoiceEnabled ? 'Voice On' : 'Voice Off'}
+          </button>
+
+          <button
             onClick={handleEndSession}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-[#767676] bg-[#FBFBF9] border border-black/[0.06] hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20 transition-all shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-text-secondary bg-background border border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20 transition-all shadow-sm"
           >
             <X className="w-4 h-4" />
             End Session
@@ -629,7 +673,7 @@ const PoseAnalyzer = ({
             >
               <div className="bg-[#DCE4E0]/90 backdrop-blur-md px-6 py-3 rounded-full shadow-[0_8px_30px_-8px_rgba(74,107,93,0.2)] flex items-center gap-3">
                 <Activity className="w-4 h-4 text-[#4A6B5D] shrink-0 animate-pulse" />
-                <span className="text-sm font-medium text-[#2A2A2A] text-center">
+                <span className="text-sm font-medium text-text-primary text-center">
                   {feedback}
                 </span>
               </div>
@@ -637,7 +681,7 @@ const PoseAnalyzer = ({
           </AnimatePresence>
 
           {/* Camera feed container */}
-          <div className="relative w-full h-full rounded-[1.5rem] overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] border border-black/[0.06]">
+          <div className="relative w-full h-full rounded-[1.5rem] overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] border border-border">
             <video
               ref={videoRef}
               autoPlay
@@ -687,7 +731,7 @@ const PoseAnalyzer = ({
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex flex-col items-center justify-center bg-[#2A2A2A]/90 gap-5"
                 >
-                  <div className="w-16 h-16 rounded-full bg-[#FBFBF9]/10 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-background/10 flex items-center justify-center">
                     <CameraOff className="w-8 h-8 text-[#DCE4E0]" />
                   </div>
                   <p className="text-white/70 font-light text-sm max-w-xs text-center">
@@ -742,8 +786,8 @@ const PoseAnalyzer = ({
         <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-4 overflow-y-auto lg:overflow-hidden">
 
           {/* ── Rep counter card ─────────────────────────────────────── */}
-          <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] flex flex-col items-center gap-3">
-            <p className="text-[10px] text-[#767676] uppercase tracking-widest font-medium">
+          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col items-center gap-3">
+            <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
               Repetitions
             </p>
 
@@ -752,16 +796,16 @@ const PoseAnalyzer = ({
               initial={{ scale: 1.15, opacity: 0.6 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="text-[5rem] font-extralight tabular-nums text-[#2A2A2A] leading-none"
+              className="text-[5rem] font-extralight tabular-nums text-text-primary leading-none"
             >
               {reps}
             </motion.div>
 
             {/* Target indicator */}
             {parsedTargetReps !== null && (
-              <p className="text-sm text-[#767676] font-light">
+              <p className="text-sm text-text-secondary font-light">
                 of{' '}
-                <span className="font-medium text-[#2A2A2A]">{parsedTargetReps}</span>{' '}
+                <span className="font-medium text-text-primary">{parsedTargetReps}</span>{' '}
                 target
               </p>
             )}
@@ -777,7 +821,7 @@ const PoseAnalyzer = ({
                     transition={{ duration: 0.4, ease: 'easeOut' }}
                   />
                 </div>
-                <p className="text-right text-[10px] text-[#767676] font-medium">
+                <p className="text-right text-[10px] text-text-secondary font-medium">
                   {Math.round(repProgress)}%
                 </p>
               </div>
@@ -785,9 +829,9 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── Stage & angle card ───────────────────────────────────── */}
-          <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] flex items-center justify-between gap-4">
+          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex items-center justify-between gap-4">
             <div className="flex flex-col items-start gap-1.5">
-              <p className="text-[10px] text-[#767676] uppercase tracking-widest font-medium">
+              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
                 Phase
               </p>
               <AnimatePresence mode="wait">
@@ -797,7 +841,7 @@ const PoseAnalyzer = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.25 }}
-                  className="text-2xl font-light text-[#2A2A2A] capitalize"
+                  className="text-2xl font-light text-text-primary capitalize"
                 >
                   {stage}
                 </motion.span>
@@ -808,9 +852,9 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── XP & exercise info card ─────────────────────────────── */}
-          <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] space-y-5">
+          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#767676]">
+              <div className="flex items-center gap-2 text-text-secondary">
                 <TrendingUp className="w-4 h-4" />
                 <span className="text-xs uppercase tracking-widest font-medium">Session</span>
               </div>
@@ -821,23 +865,23 @@ const PoseAnalyzer = ({
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center py-2.5 border-b border-black/[0.04]">
-                <span className="text-sm text-[#767676] font-light">Exercise</span>
-                <span className="text-sm text-[#2A2A2A] font-medium text-right max-w-[180px] truncate">
+              <div className="flex justify-between items-center py-2.5 border-b border-border">
+                <span className="text-sm text-text-secondary font-light">Exercise</span>
+                <span className="text-sm text-text-primary font-medium text-right max-w-[180px] truncate">
                   {exerciseName}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-2.5 border-b border-black/[0.04]">
-                <span className="text-sm text-[#767676] font-light">Target</span>
-                <span className="text-sm text-[#2A2A2A] font-medium">
+              <div className="flex justify-between items-center py-2.5 border-b border-border">
+                <span className="text-sm text-text-secondary font-light">Target</span>
+                <span className="text-sm text-text-primary font-medium">
                   {parsedTargetReps !== null ? `${parsedTargetReps} reps` : 'Open'}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-2.5 border-b border-black/[0.04]">
-                <span className="text-sm text-[#767676] font-light">Camera</span>
-                <span className={`text-sm font-medium flex items-center gap-1.5 ${cameraStatus === 'active' ? 'text-[#4A6B5D]' : 'text-[#767676]'
+              <div className="flex justify-between items-center py-2.5 border-b border-border">
+                <span className="text-sm text-text-secondary font-light">Camera</span>
+                <span className={`text-sm font-medium flex items-center gap-1.5 ${cameraStatus === 'active' ? 'text-[#4A6B5D]' : 'text-text-secondary'
                   }`}>
                   {cameraStatus === 'active' ? (
                     <><Camera className="w-3.5 h-3.5" /> Active</>
@@ -850,8 +894,8 @@ const PoseAnalyzer = ({
               </div>
 
               <div className="flex justify-between items-center py-2.5">
-                <span className="text-sm text-[#767676] font-light">Model</span>
-                <span className={`text-sm font-medium flex items-center gap-1.5 ${modelStatus === 'ready' ? 'text-[#4A6B5D]' : 'text-[#767676]'
+                <span className="text-sm text-text-secondary font-light">Model</span>
+                <span className={`text-sm font-medium flex items-center gap-1.5 ${modelStatus === 'ready' ? 'text-[#4A6B5D]' : 'text-text-secondary'
                   }`}>
                   {modelStatus === 'ready' ? (
                     <><Activity className="w-3.5 h-3.5" /> Inference Live</>
@@ -868,22 +912,22 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── WebSocket diagnostic card ─────────────────────────────── */}
-          <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] space-y-4">
-            <div className="flex items-center gap-2 text-[#767676]">
+          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-4">
+            <div className="flex items-center gap-2 text-text-secondary">
               <Wifi className="w-4 h-4" />
               <span className="text-xs uppercase tracking-widest font-medium">Stream Target</span>
             </div>
-            <div className="bg-[#FBFBF9] rounded-[0.875rem] p-4 border border-black/[0.04] font-mono text-[11px] space-y-2">
-              <p className="text-[#767676] break-all">
+            <div className="bg-background rounded-[0.875rem] p-4 border border-border font-mono text-[11px] space-y-2">
+              <p className="text-text-secondary break-all">
                 <span className="text-[#4A6B5D] font-semibold">WS</span>{' '}
                 {WS_BASE}/{exerciseId}?user_id={uid}
               </p>
-              <p className="text-[#767676]">
-                <span className="font-semibold text-[#2A2A2A]">Payload</span>{' '}
+              <p className="text-text-secondary">
+                <span className="font-semibold text-text-primary">Payload</span>{' '}
                 {'{ coordinates: { left_hip: [x,y], ... } }'}
               </p>
-              <p className="text-[#767676]">
-                <span className="font-semibold text-[#2A2A2A]">Receives</span>{' '}
+              <p className="text-text-secondary">
+                <span className="font-semibold text-text-primary">Receives</span>{' '}
                 {'{ reps, stage, feedback, angle }'}
               </p>
             </div>

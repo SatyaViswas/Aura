@@ -15,11 +15,35 @@ import Focus from './pages/Focus';
 import Workout from './pages/Workout';
 import MentalHealth from './pages/MentalHealth';
 import History from './pages/History';
+import Settings from './pages/Settings';
 
 // Layout Components
 import Navigation from './components/Navigation';
 
-// 2. Immersive Navigation Visibility Controller
+// ─────────────────────────────────────────────────────────────────────────────
+// ThemeProvider
+//
+// Watches the `theme` value in the Zustand store and synchronises it with the
+// <html> element's class list.  When `theme === 'dark'` the `dark` class is
+// present, enabling all Tailwind `dark:` variant rules across every component.
+// This runs outside the router so it always has effect, even on public routes.
+// ─────────────────────────────────────────────────────────────────────────────
+const ThemeProvider = ({ children }) => {
+  const theme = useHealthStore((state) => state.theme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  return <>{children}</>;
+};
+
+// Immersive Navigation Visibility Controller
 const shouldHideNavigation = (pathname, isActiveSession) => {
   if (isActiveSession) return true;
   const publicRoutes = ['/', '/login', '/signup'];
@@ -27,14 +51,14 @@ const shouldHideNavigation = (pathname, isActiveSession) => {
   return false;
 };
 
-// 5. Protected Routing Configuration Wrapper
+// Protected Routing Configuration Wrapper
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useHealthStore((state) => state.user.isAuthenticated);
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return children;
 };
 
@@ -42,22 +66,21 @@ const ProtectedRoute = ({ children }) => {
 const AppContent = () => {
   const location = useLocation();
   const [isInitializing, setIsInitializing] = useState(true);
-  
+
   const hydrateUserFromCloud = useHealthStore((state) => state.hydrateUserFromCloud);
   const logout = useHealthStore((state) => state.logout);
   const isActiveSession = useHealthStore((state) => state.isActiveSession);
+  const theme = useHealthStore((state) => state.theme);
 
-  // 3. Real-Time Firebase Auth Session Listener
+  // Real-Time Firebase Auth Session Listener
   useEffect(() => {
     if (!auth) {
-      // Offline fallback handling
       setIsInitializing(false);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Session Recovery: Capture identity token and flag authentication
         useHealthStore.setState((state) => ({
           user: {
             ...state.user,
@@ -66,50 +89,43 @@ const AppContent = () => {
             isAuthenticated: true
           }
         }));
-        
-        // Invoke background action to load personal records
+
         await hydrateUserFromCloud(firebaseUser.uid);
       } else {
-        // Auth payload is null: wipe browser caches cleanly
         await logout();
       }
-      
-      // Release initialization lock
+
       setIsInitializing(false);
     });
 
-    // Cleanup subscription to prevent memory leaks
     return () => unsubscribe();
   }, [hydrateUserFromCloud, logout]);
 
-  // 4. Premium Scandinavian Loading Screen View
+  // Premium Scandinavian Loading Screen
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBF9]">
-        <div className="w-16 h-16 rounded-full border-[6px] border-[#DCE4E0] border-t-[#4A6B5D] animate-spin shadow-sm mb-8" />
-        <p className="text-[#2A2A2A] text-xl font-light tracking-widest uppercase">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBF9] dark:bg-[#1A1A1A]">
+        <div className="w-16 h-16 rounded-full border-[6px] border-[#DCE4E0] dark:border-[#2E3A35] border-t-[#4A6B5D] dark:border-t-[#6D8C7E] animate-spin shadow-sm mb-8" />
+        <p className="text-[#2A2A2A] dark:text-[#FBFBF9] text-xl font-light tracking-widest uppercase">
           Securing Workspace...
         </p>
       </div>
     );
   }
 
-  // Calculate layout visibility
   const hideNav = shouldHideNavigation(location.pathname, isActiveSession);
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Conditionally render Navigation UI */}
+    <div className="min-h-screen bg-background dark:bg-[#1A1A1A] flex">
       {!hideNav && <Navigation />}
-      
-      {/* Route Projection Canvas */}
+
       <main className={`flex-1 w-full transition-all duration-300 ${!hideNav ? 'md:ml-64 pb-20 md:pb-0' : ''}`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          
+
           {/* Private Dashboards & Tracking Modules */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/water" element={<ProtectedRoute><Water /></ProtectedRoute>} />
@@ -118,7 +134,8 @@ const AppContent = () => {
           <Route path="/workout" element={<ProtectedRoute><Workout /></ProtectedRoute>} />
           <Route path="/mental" element={<ProtectedRoute><MentalHealth /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-          
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
           {/* Fallback routing logic */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
@@ -131,7 +148,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <BrowserRouter>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </BrowserRouter>
   );
 };
