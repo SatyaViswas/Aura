@@ -1,0 +1,1 @@
+"""Triceps exercises module"""

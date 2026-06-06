@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: exercise-coordinate-server
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        fromService:
+          type: web
+          name: exercise-coordinate-server
+          property: port
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: exercise-data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
