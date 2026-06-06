@@ -142,7 +142,7 @@ const RingProgress = ({ pct, size = 88 }) => {
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#DCE4E0"
+        stroke="var(--color-alert)"
         strokeWidth={6}
       />
       {/* Fill */}
@@ -151,7 +151,7 @@ const RingProgress = ({ pct, size = 88 }) => {
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#4A6B5D"
+        stroke="var(--color-primary)"
         strokeWidth={6}
         strokeLinecap="round"
         strokeDasharray={circumference}
@@ -165,7 +165,7 @@ const RingProgress = ({ pct, size = 88 }) => {
 
 /** Reusable section label with icon */
 const PillarLabel = ({ icon: Icon, label }) => (
-  <div className="flex items-center gap-2 text-[#767676] mb-4">
+  <div className="flex items-center gap-2 text-text-secondary mb-4">
     <Icon className="w-3.5 h-3.5 shrink-0" />
     <span className="text-[10px] uppercase tracking-widest font-semibold">{label}</span>
   </div>
@@ -178,31 +178,31 @@ const PillarLabel = ({ icon: Icon, label }) => (
 const MetricCard = ({ icon: Icon, pillarLabel, value, target, unit, progressPct, children }) => (
   <motion.div
     variants={staggerItem}
-    className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03]"
+    className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border"
   >
     <PillarLabel icon={Icon} label={pillarLabel} />
 
     <div className="flex items-end justify-between gap-3">
       <div>
-        <span className="text-3xl font-light text-[#2A2A2A] tabular-nums">
+        <span className="text-3xl font-light text-text-primary tabular-nums">
           {value.toLocaleString()}
         </span>
-        <span className="text-sm text-[#767676] ml-1.5">{unit}</span>
+        <span className="text-sm text-text-secondary ml-1.5">{unit}</span>
       </div>
       <div className="text-right">
-        <span className="text-xs text-[#767676] font-light">
+        <span className="text-xs text-text-secondary font-light">
           Target
         </span>
-        <p className="text-sm font-medium text-[#2A2A2A] mt-0.5">
+        <p className="text-sm font-medium text-text-primary mt-0.5">
           {target.toLocaleString()}{' '}
-          <span className="font-light text-[#767676]">{unit}</span>
+          <span className="font-light text-text-secondary">{unit}</span>
         </p>
       </div>
     </div>
 
     <ProgressBar pct={progressPct} />
 
-    <p className="text-xs text-[#767676] mt-2 font-light">
+    <p className="text-xs text-text-secondary mt-2 font-light">
       {Math.round(progressPct)}% of daily target reached
     </p>
 
@@ -217,26 +217,26 @@ const MetricCard = ({ icon: Icon, pillarLabel, value, target, unit, progressPct,
 const MentalCard = ({ logged }) => (
   <motion.div
     variants={staggerItem}
-    className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] flex flex-col justify-between"
+    className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border flex flex-col justify-between"
   >
     <PillarLabel icon={BrainCircuit} label="Mental Health" />
 
     <div className="flex items-center gap-4 mt-2">
       <div
-        className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${logged ? 'bg-[#DCE4E0]' : 'bg-[#FBFBF9] border border-black/[0.06]'
+        className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${logged ? 'bg-[#DCE4E0]' : 'bg-background border border-border'
           }`}
       >
         {logged ? (
           <CheckCircle2 className="w-7 h-7 text-[#4A6B5D]" />
         ) : (
-          <XCircle className="w-7 h-7 text-[#767676]/50" />
+          <XCircle className="w-7 h-7 text-text-secondary/50" />
         )}
       </div>
       <div>
-        <p className={`text-base font-medium ${logged ? 'text-[#4A6B5D]' : 'text-[#767676]'}`}>
+        <p className={`text-base font-medium ${logged ? 'text-[#4A6B5D]' : 'text-text-secondary'}`}>
           {logged ? 'Session Logged' : 'Not Recorded'}
         </p>
-        <p className="text-xs text-[#767676] font-light mt-0.5">
+        <p className="text-xs text-text-secondary font-light mt-0.5">
           {logged
             ? 'Mindfulness practice completed for this day.'
             : 'No mental wellness activity was recorded.'}
@@ -287,7 +287,7 @@ const WorkoutCard = ({ goals }) => {
   return (
     <motion.div
       variants={staggerItem}
-      className="bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] lg:col-span-2"
+      className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border lg:col-span-2"
     >
       <PillarLabel icon={Dumbbell} label="Training Analytics" />
 
@@ -296,9 +296,9 @@ const WorkoutCard = ({ goals }) => {
         <div className="relative shrink-0 flex items-center justify-center">
           <RingProgress pct={workoutProgressPct} size={96} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-lg font-light text-[#2A2A2A] tabular-nums leading-none">
+            <span className="text-lg font-light text-text-primary tabular-nums leading-none">
               {Math.round(workoutProgressPct)}
-              <span className="text-xs text-[#767676]">%</span>
+              <span className="text-xs text-text-secondary">%</span>
             </span>
           </div>
         </div>
@@ -306,16 +306,16 @@ const WorkoutCard = ({ goals }) => {
         {/* Metric tiles */}
         <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-3 w-full">
           {/* Completed count */}
-          <div className="bg-[#FBFBF9] rounded-[0.875rem] p-4 flex flex-col gap-1.5 border border-black/[0.04]">
-            <div className="flex items-center gap-1.5 text-[#767676]">
+          <div className="bg-background rounded-[0.875rem] p-4 flex flex-col gap-1.5 border border-border">
+            <div className="flex items-center gap-1.5 text-text-secondary">
               <ListChecks className="w-3.5 h-3.5" />
               <span className="text-[10px] uppercase tracking-wider font-medium">Exercises</span>
             </div>
-            <span className="text-2xl font-light text-[#2A2A2A]">
+            <span className="text-2xl font-light text-text-primary">
               {completedCount}
-              <span className="text-xs text-[#767676] ml-1 font-light">/ 4</span>
+              <span className="text-xs text-text-secondary ml-1 font-light">/ 4</span>
             </span>
-            <span className="text-[10px] text-[#767676] font-light leading-tight">
+            <span className="text-[10px] text-text-secondary font-light leading-tight">
               {completedCount === 1
                 ? '1 exercise completed'
                 : `${completedCount} exercises completed`}
@@ -323,16 +323,16 @@ const WorkoutCard = ({ goals }) => {
           </div>
 
           {/* Progress milestone */}
-          <div className="bg-[#FBFBF9] rounded-[0.875rem] p-4 flex flex-col gap-1.5 border border-black/[0.04]">
-            <div className="flex items-center gap-1.5 text-[#767676]">
+          <div className="bg-background rounded-[0.875rem] p-4 flex flex-col gap-1.5 border border-border">
+            <div className="flex items-center gap-1.5 text-text-secondary">
               <TrendingUp className="w-3.5 h-3.5" />
               <span className="text-[10px] uppercase tracking-wider font-medium">Goal</span>
             </div>
-            <span className="text-2xl font-light text-[#2A2A2A]">
+            <span className="text-2xl font-light text-text-primary">
               {Math.round(workoutProgressPct)}
-              <span className="text-xs text-[#767676] ml-0.5">%</span>
+              <span className="text-xs text-text-secondary ml-0.5">%</span>
             </span>
-            <span className="text-[10px] text-[#767676] font-light leading-tight">
+            <span className="text-[10px] text-text-secondary font-light leading-tight">
               {workoutProgressPct >= 100 ? 'Daily target met' : 'Towards daily goal'}
             </span>
           </div>
@@ -355,8 +355,8 @@ const WorkoutCard = ({ goals }) => {
 
       {/* Exercise ID token list */}
       {completedExerciseIds.length > 0 && (
-        <div className="mt-6 pt-5 border-t border-black/[0.04]">
-          <p className="text-[10px] text-[#767676] uppercase tracking-widest font-semibold mb-3">
+        <div className="mt-6 pt-5 border-t border-border">
+          <p className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold mb-3">
             Completed Exercise IDs
           </p>
           <div className="flex flex-wrap gap-2">
@@ -377,8 +377,8 @@ const WorkoutCard = ({ goals }) => {
 
       {/* Legacy boolean fallback notice */}
       {completedExerciseIds.length === 0 && legacyCompleted && (
-        <div className="mt-5 pt-5 border-t border-black/[0.04]">
-          <p className="text-xs text-[#767676] font-light">
+        <div className="mt-5 pt-5 border-t border-border">
+          <p className="text-xs text-text-secondary font-light">
             This day was recorded as workout-complete using the legacy session flag. Individual
             exercise IDs were not stored for entries before the granular tracking update.
           </p>
@@ -396,7 +396,7 @@ const StreakBadge = ({ kept }) => (
   <span
     className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${kept
         ? 'bg-[#DCE4E0] text-[#4A6B5D]'
-        : 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]'
+        : 'bg-background text-text-secondary border border-border'
       }`}
   >
     {kept ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
@@ -423,10 +423,10 @@ const DayDetailPane = ({ selectedDate, historyEntry }) => {
         <div className="w-20 h-20 rounded-full bg-[#DCE4E0] flex items-center justify-center mb-6">
           <Moon className="w-9 h-9 text-[#4A6B5D]" />
         </div>
-        <h3 className="text-xl font-light text-[#2A2A2A] tracking-tight mb-2">
+        <h3 className="text-xl font-light text-text-primary tracking-tight mb-2">
           No records for this date
         </h3>
-        <p className="text-sm text-[#767676] font-light leading-relaxed max-w-xs">
+        <p className="text-sm text-text-secondary font-light leading-relaxed max-w-xs">
           No metric records found for this date. Take this time to reflect and rest.
         </p>
       </motion.div>
@@ -454,10 +454,10 @@ const DayDetailPane = ({ selectedDate, historyEntry }) => {
       {/* Date header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] text-[#767676] uppercase tracking-widest font-medium mb-1">
+          <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium mb-1">
             Session Archive
           </p>
-          <h2 className="text-2xl font-light text-[#2A2A2A] tracking-tight">
+          <h2 className="text-2xl font-light text-text-primary tracking-tight">
             {formatLongDate(selectedDate)}
           </h2>
         </div>
@@ -492,18 +492,18 @@ const DayDetailPane = ({ selectedDate, historyEntry }) => {
         >
           {/* Macro breakdown sub-row */}
           {(goals.macroProtein > 0 || goals.macroCarbs > 0 || goals.macroFat > 0) && (
-            <div className="mt-4 pt-4 border-t border-black/[0.04] grid grid-cols-3 gap-2">
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2">
               {[
                 { label: 'Protein', value: goals.macroProtein },
                 { label: 'Carbs', value: goals.macroCarbs },
                 { label: 'Fat', value: goals.macroFat },
               ].map(({ label, value }) => (
                 <div key={label} className="text-center">
-                  <p className="text-base font-light text-[#2A2A2A]">
+                  <p className="text-base font-light text-text-primary">
                     {value}
-                    <span className="text-[10px] text-[#767676] ml-0.5">g</span>
+                    <span className="text-[10px] text-text-secondary ml-0.5">g</span>
                   </p>
-                  <p className="text-[10px] text-[#767676] uppercase tracking-wider mt-0.5">
+                  <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">
                     {label}
                   </p>
                 </div>
@@ -559,7 +559,7 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
       <button
         onClick={scrollLeft}
         aria-label="Scroll calendar left"
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-black/[0.06] shadow-[0_2px_12px_rgba(42,42,42,0.06)] flex items-center justify-center text-[#767676] hover:text-[#2A2A2A] transition-colors"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-surface border border-border shadow-[0_2px_12px_rgba(42,42,42,0.06)] flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -582,12 +582,12 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
               onClick={() => onSelectDate(isoDate)}
               className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-4 py-3.5 rounded-[1rem] transition-all duration-200 border relative ${isSelected
                   ? 'bg-[#4A6B5D] text-white border-[#4A6B5D] shadow-[0_8px_24px_-4px_rgba(74,107,93,0.30)]'
-                  : 'bg-white text-[#2A2A2A] border-black/[0.05] hover:border-[#4A6B5D]/20 hover:shadow-[0_4px_16px_-4px_rgba(42,42,42,0.08)]'
+                  : 'bg-surface text-text-primary border-border hover:border-[#4A6B5D]/20 hover:shadow-[0_4px_16px_-4px_rgba(42,42,42,0.08)]'
                 }`}
             >
               {/* Day-of-week */}
               <span
-                className={`text-[10px] uppercase tracking-widest font-semibold ${isSelected ? 'text-white/70' : 'text-[#767676]'
+                className={`text-[10px] uppercase tracking-widest font-semibold ${isSelected ? 'text-white/70' : 'text-text-secondary'
                   }`}
               >
                 {isToday ? 'Today' : dayLabel}
@@ -595,7 +595,7 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
 
               {/* Day number */}
               <span
-                className={`text-xl font-light leading-none tabular-nums ${isSelected ? 'text-white' : 'text-[#2A2A2A]'
+                className={`text-xl font-light leading-none tabular-nums ${isSelected ? 'text-white' : 'text-text-primary'
                   }`}
               >
                 {dayNumber}
@@ -603,7 +603,7 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
 
               {/* Month label */}
               <span
-                className={`text-[10px] font-light ${isSelected ? 'text-white/60' : 'text-[#767676]'
+                className={`text-[10px] font-light ${isSelected ? 'text-white/60' : 'text-text-secondary'
                   }`}
               >
                 {monthLabel}
@@ -613,10 +613,10 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
               <span
                 className={`w-1.5 h-1.5 rounded-full mt-0.5 transition-colors ${hasRecord
                     ? isSelected
-                      ? 'bg-white/70'
+                      ? 'bg-surface/70'
                       : 'bg-[#4A6B5D]'
                     : isSelected
-                      ? 'bg-white/20'
+                      ? 'bg-surface/20'
                       : 'bg-[#DCE4E0]'
                   }`}
               />
@@ -629,7 +629,7 @@ const CalendarStrip = ({ days, selectedDate, historyMap, onSelectDate }) => {
       <button
         onClick={scrollRight}
         aria-label="Scroll calendar right"
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-black/[0.06] shadow-[0_2px_12px_rgba(42,42,42,0.06)] flex items-center justify-center text-[#767676] hover:text-[#2A2A2A] transition-colors"
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-surface border border-border shadow-[0_2px_12px_rgba(42,42,42,0.06)] flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
@@ -680,18 +680,18 @@ const SummaryStatStrip = ({ historyMap, days }) => {
       {tiles.map(({ label, value, suffix }) => (
         <div
           key={label}
-          className="bg-white rounded-[1.5rem] p-6 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] flex flex-col gap-1"
+          className="bg-surface rounded-[1.5rem] p-6 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border flex flex-col gap-1"
         >
-          <span className="text-[10px] text-[#767676] uppercase tracking-widest font-semibold">
+          <span className="text-[10px] text-text-secondary uppercase tracking-widest font-semibold">
             {label}
           </span>
-          <span className="text-3xl font-light text-[#2A2A2A] tabular-nums">
+          <span className="text-3xl font-light text-text-primary tabular-nums">
             {value}
             {suffix && (
-              <span className="text-base text-[#767676] ml-0.5 font-light">{suffix}</span>
+              <span className="text-base text-text-secondary ml-0.5 font-light">{suffix}</span>
             )}
           </span>
-          <span className="text-[10px] text-[#767676] font-light">Last 30 days</span>
+          <span className="text-[10px] text-text-secondary font-light">Last 30 days</span>
         </div>
       ))}
     </div>
@@ -757,7 +757,7 @@ const History = () => {
   const selectedEntry = historyMap[selectedDate] || null;
 
   return (
-    <div className="min-h-screen bg-[#FBFBF9]">
+    <div className="min-h-screen bg-background transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14">
 
         {/* ── Page Header ──────────────────────────────────────────────────── */}
@@ -773,10 +773,10 @@ const History = () => {
               Wellness Archive
             </span>
           </div>
-          <h1 className="text-3xl md:text-[2.25rem] font-light text-[#2A2A2A] tracking-tight leading-snug">
+          <h1 className="text-3xl md:text-[2.25rem] font-light text-text-primary tracking-tight leading-snug">
             History
           </h1>
-          <p className="text-[#767676] text-base font-light">
+          <p className="text-text-secondary text-base font-light">
             Select any day to inspect your full wellness report for that session.
           </p>
         </motion.header>
@@ -795,9 +795,9 @@ const History = () => {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.12 }}
-          className="bg-white rounded-[1.5rem] p-6 md:p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-black/[0.03] mb-8"
+          className="bg-surface rounded-[1.5rem] p-6 md:p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border mb-8"
         >
-          <div className="flex items-center gap-2 text-[#767676] mb-5">
+          <div className="flex items-center gap-2 text-text-secondary mb-5">
             <CalendarDays className="w-3.5 h-3.5" />
             <span className="text-[10px] uppercase tracking-widest font-semibold">
               30-Day Selector
@@ -812,7 +812,7 @@ const History = () => {
           />
 
           {/* Legend */}
-          <div className="flex items-center gap-5 mt-5 text-xs font-light text-[#767676]">
+          <div className="flex items-center gap-5 mt-5 text-xs font-light text-text-secondary">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#4A6B5D] block" />
               <span>Has data</span>

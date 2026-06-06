@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 const Diet = () => {
   const dailyGoals = useHealthStore((state) => state.dailyGoals);
   const logCalories = useHealthStore((state) => state.logCalories);
+  const theme = useHealthStore((state) => state.theme);
   
   const [activeTab, setActiveTab] = useState('Breakfast');
   const [mealName, setMealName] = useState('');
@@ -24,7 +25,7 @@ const Diet = () => {
     { name: 'Fats', value: macroFat || 1 },
   ];
   const totalMacros = macroProtein + macroCarbs + macroFat;
-  const COLORS = ['#4A6B5D', '#BCA88E', '#E2D9C8']; // Organic neutral shades
+  const COLORS = theme === 'dark' ? ['#6D8C7E', '#BCA88E', '#E2D9C8'] : ['#4A6B5D', '#BCA88E', '#E2D9C8']; // Organic neutral shades
 
   const handleLogMeal = (e) => {
     e.preventDefault();
@@ -93,7 +94,7 @@ const Diet = () => {
                   stroke="none"
                 >
                   {totalMacros === 0 ? (
-                    <Cell fill="#DCE4E0" />
+                    <Cell fill={theme === 'dark' ? '#2E3A35' : '#DCE4E0'} />
                   ) : (
                     macroData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -101,8 +102,8 @@ const Diet = () => {
                   )}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
-                  itemStyle={{ color: '#2A2A2A', fontWeight: 300 }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', backgroundColor: theme === 'dark' ? '#262626' : '#FFFFFF' }} 
+                  itemStyle={{ color: theme === 'dark' ? '#FBFBF9' : '#2A2A2A', fontWeight: 300 }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -153,7 +154,7 @@ const Diet = () => {
                 placeholder="e.g. Avocado Toast with Egg"
                 value={mealName}
                 onChange={(e) => setMealName(e.target.value)}
-                className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                 required
               />
             </div>
@@ -166,7 +167,7 @@ const Diet = () => {
                   placeholder="kcal"
                   value={calories}
                   onChange={(e) => setCalories(e.target.value)}
-                  className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                  className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                   required
                   min="0"
                 />
@@ -178,7 +179,7 @@ const Diet = () => {
                   placeholder="0"
                   value={protein}
                   onChange={(e) => setProtein(e.target.value)}
-                  className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                  className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                   min="0"
                 />
               </div>
@@ -189,7 +190,7 @@ const Diet = () => {
                   placeholder="0"
                   value={carbs}
                   onChange={(e) => setCarbs(e.target.value)}
-                  className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                  className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                   min="0"
                 />
               </div>
@@ -200,7 +201,7 @@ const Diet = () => {
                   placeholder="0"
                   value={fats}
                   onChange={(e) => setFats(e.target.value)}
-                  className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                  className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
                   min="0"
                 />
               </div>

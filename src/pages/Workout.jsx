@@ -147,9 +147,9 @@ const BackButton = ({ onClick, label = 'Back' }) => (
     animate={{ opacity: 1, x: 0 }}
     transition={{ duration: 0.3 }}
     onClick={onClick}
-    className="inline-flex items-center gap-2 text-[#767676] hover:text-[#2A2A2A] transition-colors duration-200 group mb-8"
+    className="inline-flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors duration-200 group mb-8"
   >
-    <span className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-[0_2px_12px_rgba(42,42,42,0.06)] group-hover:shadow-[0_4px_16px_rgba(42,42,42,0.10)] transition-shadow border border-black/[0.04]">
+    <span className="w-9 h-9 rounded-full bg-surface flex items-center justify-center shadow-[0_2px_12px_rgba(42,42,42,0.06)] group-hover:shadow-[0_4px_16px_rgba(42,42,42,0.10)] transition-shadow border border-border">
       <ArrowLeft className="w-4 h-4" />
     </span>
     <span className="text-sm font-medium">{label}</span>
@@ -158,11 +158,11 @@ const BackButton = ({ onClick, label = 'Back' }) => (
 
 const SectionHeader = ({ title, subtitle }) => (
   <header className="mb-10 space-y-1">
-    <h1 className="text-3xl md:text-[2.25rem] font-light text-[#2A2A2A] tracking-tight leading-snug">
+    <h1 className="text-3xl md:text-[2.25rem] font-light text-text-primary tracking-tight leading-snug">
       {title}
     </h1>
     {subtitle && (
-      <p className="text-[#767676] text-base font-light">{subtitle}</p>
+      <p className="text-text-secondary text-base font-light">{subtitle}</p>
     )}
   </header>
 );
@@ -230,18 +230,18 @@ const CountdownTimer = ({ exercise, onComplete }) => {
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.35 }}
-      className="bg-white rounded-[1.5rem] p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.07)] flex flex-col items-center gap-6"
+      className="bg-surface rounded-[1.5rem] p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.07)] flex flex-col items-center gap-6"
     >
       <div className="text-center space-y-1">
-        <h3 className="text-lg font-light text-[#2A2A2A] tracking-tight">{exercise.name}</h3>
-        <p className="text-xs text-[#767676] uppercase tracking-widest">Manual Timer</p>
+        <h3 className="text-lg font-light text-text-primary tracking-tight">{exercise.name}</h3>
+        <p className="text-xs text-text-secondary uppercase tracking-widest">Manual Timer</p>
       </div>
 
       <div className="relative w-36 h-36 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#DCE4E0" strokeWidth="6" />
+          <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-alert)" strokeWidth="6" />
           <circle
-            cx="60" cy="60" r="54" fill="none" stroke="#4A6B5D" strokeWidth="6" strokeLinecap="round"
+            cx="60" cy="60" r="54" fill="none" stroke="var(--color-primary)" strokeWidth="6" strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference - (circumference * progressPct) / 100}
             style={{ transition: 'stroke-dashoffset 0.95s linear' }}
@@ -251,7 +251,7 @@ const CountdownTimer = ({ exercise, onComplete }) => {
           {isDone ? (
             <CheckCircle2 className="w-10 h-10 text-[#4A6B5D]" />
           ) : (
-            <span className="text-3xl font-light tabular-nums text-[#2A2A2A]">
+            <span className="text-3xl font-light tabular-nums text-text-primary">
               {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </span>
           )}
@@ -261,7 +261,7 @@ const CountdownTimer = ({ exercise, onComplete }) => {
       <div className="flex items-center gap-4">
         <button
           onClick={resetTimer}
-          className="w-11 h-11 rounded-full bg-[#FBFBF9] border border-black/[0.06] flex items-center justify-center text-[#767676] hover:text-[#2A2A2A] hover:border-black/10 transition-all shadow-sm"
+          className="w-11 h-11 rounded-full bg-background border border-border flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-black/10 transition-all shadow-sm"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -321,11 +321,11 @@ const PoseAnalyzerOverlay = ({ exercise, onClose }) => {
       <motion.div
         initial={{ scale: 0.94, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.94, opacity: 0, y: 16 }}
         transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-[1.5rem] shadow-[0_30px_80px_-10px_rgba(42,42,42,0.18)] p-10 max-w-md w-full relative"
+        className="bg-surface rounded-[1.5rem] shadow-[0_30px_80px_-10px_rgba(42,42,42,0.18)] p-10 max-w-md w-full relative"
       >
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#FBFBF9] flex items-center justify-center text-[#767676] hover:text-[#2A2A2A] transition-colors border border-black/[0.05]"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-background flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors border border-border"
         >
           <X className="w-4 h-4" />
         </button>
@@ -340,25 +340,25 @@ const PoseAnalyzerOverlay = ({ exercise, onClose }) => {
         </div>
 
         <div className="text-center space-y-3 mb-8">
-          <h3 className="text-xl font-light text-[#2A2A2A] tracking-tight">Initializing Camera Node</h3>
-          <p className="text-sm text-[#767676] font-light leading-relaxed">
-            Connecting pose analysis stream for <span className="font-medium text-[#2A2A2A]">{exercise.name}</span>
+          <h3 className="text-xl font-light text-text-primary tracking-tight">Initializing Camera Node</h3>
+          <p className="text-sm text-text-secondary font-light leading-relaxed">
+            Connecting pose analysis stream for <span className="font-medium text-text-primary">{exercise.name}</span>
           </p>
         </div>
 
-        <div className="bg-[#FBFBF9] rounded-[1rem] p-5 border border-black/[0.05] font-mono text-xs space-y-2.5">
+        <div className="bg-background rounded-[1rem] p-5 border border-border font-mono text-xs space-y-2.5">
           <div className="flex items-center gap-2.5 text-[#4A6B5D]">
             <Wifi className="w-3.5 h-3.5 shrink-0" />
-            <span className="text-[#767676]">WebSocket Target:</span>
-            <span className="text-[#2A2A2A] font-semibold break-all">{wsUrl}</span>
+            <span className="text-text-secondary">WebSocket Target:</span>
+            <span className="text-text-primary font-semibold break-all">{wsUrl}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-[#767676]">
+          <div className="flex items-center gap-2.5 text-text-secondary">
             <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
               <div className="w-2 h-2 rounded-full bg-[#4A6B5D] animate-pulse" />
             </div>
             <span>WebRTC stream negotiating{dots}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-[#767676]">
+          <div className="flex items-center gap-2.5 text-text-secondary">
             <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
               <div className="w-2 h-2 rounded-full bg-[#DCE4E0]" />
             </div>
@@ -379,38 +379,38 @@ const ExercisePreviewPane = ({ exercise, onClose, onBeginSession }) => {
     <motion.div
       initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}
       transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-      className="bg-white rounded-[1.5rem] shadow-[0_10px_40px_-10px_rgba(42,42,42,0.08)] p-8 flex flex-col gap-6 border border-black/[0.03]"
+      className="bg-surface rounded-[1.5rem] shadow-[0_10px_40px_-10px_rgba(42,42,42,0.08)] p-8 flex flex-col gap-6 border border-border"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <p className="text-xs text-[#767676] uppercase tracking-widest font-medium">Exercise Detail</p>
-          <h3 className="text-xl font-light text-[#2A2A2A] leading-snug">{exercise.name}</h3>
+          <p className="text-xs text-text-secondary uppercase tracking-widest font-medium">Exercise Detail</p>
+          <h3 className="text-xl font-light text-text-primary leading-snug">{exercise.name}</h3>
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-full bg-[#FBFBF9] flex items-center justify-center text-[#767676] hover:text-[#2A2A2A] transition-colors border border-black/[0.05] shrink-0"
+          className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors border border-border shrink-0"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-[#FBFBF9] rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-black/[0.04]">
-          <div className="flex items-center gap-1.5 text-[#767676]">
+        <div className="bg-background rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-border">
+          <div className="flex items-center gap-1.5 text-text-secondary">
             <TrendingUp className="w-3.5 h-3.5" />
             <span className="text-[10px] uppercase tracking-wider font-medium">Reps</span>
           </div>
-          <span className="text-lg font-light text-[#2A2A2A]">{exercise.target_reps ?? '—'}</span>
+          <span className="text-lg font-light text-text-primary">{exercise.target_reps ?? '—'}</span>
         </div>
-        <div className="bg-[#FBFBF9] rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-black/[0.04]">
-          <div className="flex items-center gap-1.5 text-[#767676]">
+        <div className="bg-background rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-border">
+          <div className="flex items-center gap-1.5 text-text-secondary">
             <Timer className="w-3.5 h-3.5" />
             <span className="text-[10px] uppercase tracking-wider font-medium">Duration</span>
           </div>
-          <span className="text-lg font-light text-[#2A2A2A]">{exercise.target_duration ?? '—'}</span>
+          <span className="text-lg font-light text-text-primary">{exercise.target_duration ?? '—'}</span>
         </div>
-        <div className="bg-[#FBFBF9] rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-black/[0.04]">
-          <div className="flex items-center gap-1.5 text-[#767676]">
+        <div className="bg-background rounded-[0.875rem] p-3.5 flex flex-col gap-1.5 border border-border">
+          <div className="flex items-center gap-1.5 text-text-secondary">
             <Star className="w-3.5 h-3.5" />
             <span className="text-[10px] uppercase tracking-wider font-medium">XP</span>
           </div>
@@ -420,7 +420,7 @@ const ExercisePreviewPane = ({ exercise, onClose, onBeginSession }) => {
 
       <div className={`inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-xs font-medium ${exercise.pose_analyzer
         ? 'bg-[#DCE4E0] text-[#4A6B5D]'
-        : 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]'
+        : 'bg-background text-text-secondary border border-border'
         }`}>
         {exercise.pose_analyzer ? (
           <><Camera className="w-3 h-3" /> CV Tracking Enabled</>
@@ -430,7 +430,7 @@ const ExercisePreviewPane = ({ exercise, onClose, onBeginSession }) => {
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-[#767676]">
+        <div className="flex items-center gap-2 text-text-secondary">
           <BookOpen className="w-3.5 h-3.5" />
           <span className="text-xs uppercase tracking-widest font-medium">Form Cues</span>
         </div>
@@ -440,7 +440,7 @@ const ExercisePreviewPane = ({ exercise, onClose, onBeginSession }) => {
               <span className="shrink-0 w-5 h-5 rounded-full bg-[#DCE4E0] text-[#4A6B5D] text-[10px] font-bold flex items-center justify-center mt-0.5 text-center">
                 {idx + 1}
               </span>
-              <p className="text-sm text-[#767676] font-light leading-relaxed">{step}</p>
+              <p className="text-sm text-text-secondary font-light leading-relaxed">{step}</p>
             </li>
           ))}
         </ol>
@@ -469,8 +469,8 @@ const ModalityDiscovery = ({ onSelectModality }) => {
   }));
 
   // Fetch metrics directly to update the dashboard panels cleanly
-  const highestDailyXp = useHealthStore((state) => state.user.highestDailyXp || 0);
-  const dailyXpEarned = useHealthStore((state) => state.dailyGoals.dailyXpEarned || 0);
+  const dailyXpEarned = useHealthStore((state) => state.dailyGoals?.dailyXpEarned ?? 0);
+  const highestDailyXp = useHealthStore((state) => state.user?.highestDailyXp ?? 0);
 
   return (
     <motion.div key="level-1" variants={pageVariants} initial="initial" animate="animate" exit="exit" className="space-y-10">
@@ -480,11 +480,11 @@ const ModalityDiscovery = ({ onSelectModality }) => {
         {modalities.map(({ key, title, icon: Icon, tagline, badge, bgDecor, tracks }) => (
           <motion.button
             key={key} variants={cardItem} onClick={() => onSelectModality(key)}
-            className="group relative text-left bg-white rounded-[1.5rem] p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 overflow-hidden border border-black/[0.03] hover:border-[#4A6B5D]/20"
+            className="group relative text-left bg-surface rounded-[1.5rem] p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 overflow-hidden border border-border hover:border-[#4A6B5D]/20"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${bgDecor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
             <div className="absolute -right-4 -bottom-4 opacity-[0.04] group-hover:opacity-[0.07] transition-opacity duration-500">
-              <Icon className="w-40 h-40 text-[#2A2A2A]" />
+              <Icon className="w-40 h-40 text-text-primary" />
             </div>
 
             <div className="relative z-10 flex flex-col h-full min-h-[200px] justify-between">
@@ -495,12 +495,12 @@ const ModalityDiscovery = ({ onSelectModality }) => {
                 <span className="inline-block text-[10px] uppercase tracking-widest font-semibold text-[#4A6B5D] bg-[#DCE4E0] px-2.5 py-1 rounded-full mb-3">
                   {badge}
                 </span>
-                <h2 className="text-xl font-light text-[#2A2A2A] leading-tight mb-2">{title}</h2>
-                <p className="text-sm text-[#767676] font-light leading-relaxed">{tagline}</p>
+                <h2 className="text-xl font-light text-text-primary leading-tight mb-2">{title}</h2>
+                <p className="text-sm text-text-secondary font-light leading-relaxed">{tagline}</p>
               </div>
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-black/[0.05]">
-                <span className="text-xs text-[#767676]">{tracks.length} program{tracks.length !== 1 ? 's' : ''}</span>
-                <ChevronRight className="w-4 h-4 text-[#767676] group-hover:text-[#4A6B5D] group-hover:translate-x-1 transition-all duration-200" />
+              <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+                <span className="text-xs text-text-secondary">{tracks.length} program{tracks.length !== 1 ? 's' : ''}</span>
+                <ChevronRight className="w-4 h-4 text-text-secondary group-hover:text-[#4A6B5D] group-hover:translate-x-1 transition-all duration-200" />
               </div>
             </div>
           </motion.button>
@@ -513,23 +513,23 @@ const ModalityDiscovery = ({ onSelectModality }) => {
           { label: 'Exercise Nodes', value: '196', icon: TrendingUp },
           { label: 'Unique Exercises', value: '151', icon: Zap },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-white rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] flex flex-col items-center justify-center gap-1 border border-black/[0.03]">
+          <div key={label} className="bg-surface rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.25)] flex flex-col items-center justify-center gap-1 border border-border">
             <Icon className="w-4 h-4 text-[#4A6B5D] mb-1" />
-            <span className="text-2xl font-light text-[#2A2A2A]">{value}</span>
-            <span className="text-[10px] text-[#767676] uppercase tracking-wider text-center">{label}</span>
+            <span className="text-2xl font-light text-text-primary">{value}</span>
+            <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">{label}</span>
           </div>
         ))}
 
         {/* Dynamic Card: Today's XP vs Lifetime Peak */}
-        <div className="bg-white rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] flex flex-col items-center justify-center gap-1 border border-black/[0.03]">
+        <div className="bg-surface rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.25)] flex flex-col items-center justify-center gap-1 border border-border">
           <Trophy className="w-4 h-4 text-[#4A6B5D] mb-1" />
-          <span className="text-2xl font-light text-[#2A2A2A] tabular-nums">
+          <span className="text-2xl font-light text-text-primary tabular-nums">
             {dailyXpEarned}
-            <span className="text-xs text-[#767676]/40 px-1 font-light">/</span>
+            <span className="text-xs text-text-secondary/40 px-1 font-light">/</span>
             <span className="text-base font-normal text-[#4A6B5D]">{highestDailyXp}</span>
             <span className="text-[10px] text-[#4A6B5D] font-medium ml-0.5">XP</span>
           </span>
-          <span className="text-[10px] text-[#767676] uppercase tracking-wider text-center">
+          <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">
             Today vs Best Ever
           </span>
         </div>
@@ -558,21 +558,21 @@ const TrackList = ({ modalityKey, onBack, onSelectTrack }) => {
           return (
             <motion.button
               key={track.id} variants={cardItem} onClick={() => onSelectTrack(track)}
-              className="group text-left bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 border border-black/[0.03] hover:border-[#4A6B5D]/20 relative overflow-hidden"
+              className="group text-left bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 border border-border hover:border-[#4A6B5D]/20 relative overflow-hidden"
             >
               <div className="absolute left-0 top-6 bottom-6 w-0.5 bg-[#DCE4E0] rounded-full group-hover:bg-[#4A6B5D] transition-colors duration-300" />
               <div className="pl-5">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="text-lg font-light text-[#2A2A2A] leading-tight">{track.title}</h3>
-                    <p className="text-xs text-[#767676] mt-1">{totalExercises} exercises · {track.subSections.length} sessions</p>
+                    <h3 className="text-lg font-light text-text-primary leading-tight">{track.title}</h3>
+                    <p className="text-xs text-text-secondary mt-1">{totalExercises} exercises · {track.subSections.length} sessions</p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-[#767676] group-hover:text-[#4A6B5D] group-hover:translate-x-1 transition-all shrink-0 mt-0.5" />
+                  <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-[#4A6B5D] group-hover:translate-x-1 transition-all shrink-0 mt-0.5" />
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs text-[#767676] bg-[#FBFBF9] border border-black/[0.05] px-2.5 py-1 rounded-full"><Clock className="w-3 h-3" />{trackMeta.duration}</span>
-                  <span className="inline-flex items-center gap-1 text-xs text-[#767676] bg-[#FBFBF9] border border-black/[0.05] px-2.5 py-1 rounded-full"><RotateCcw className="w-3 h-3" />{trackMeta.frequency}</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-text-secondary bg-background border border-border px-2.5 py-1 rounded-full"><Clock className="w-3 h-3" />{trackMeta.duration}</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-text-secondary bg-background border border-border px-2.5 py-1 rounded-full"><RotateCcw className="w-3 h-3" />{trackMeta.frequency}</span>
                   <span className="inline-flex items-center gap-1 text-xs text-[#4A6B5D] bg-[#DCE4E0] px-2.5 py-1 rounded-full font-medium"><TrendingUp className="w-3 h-3" />{trackMeta.difficulty}</span>
                 </div>
               </div>
@@ -603,23 +603,23 @@ const SubSectionGrid = ({ track, onBack, onSelectSubSection }) => {
           return (
             <motion.button
               key={sub.id} variants={cardItem} onClick={() => onSelectSubSection(sub)}
-              className="group text-left bg-white rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 border border-black/[0.03] hover:border-[#4A6B5D]/20 relative overflow-hidden"
+              className="group text-left bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] hover:shadow-[0_16px_50px_-10px_rgba(42,42,42,0.09)] transition-all duration-300 border border-border hover:border-[#4A6B5D]/20 relative overflow-hidden"
             >
-              <div className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#FBFBF9] border border-black/[0.05] flex items-center justify-center text-xs font-medium text-[#767676] group-hover:bg-[#DCE4E0] group-hover:text-[#4A6B5D] group-hover:border-[#4A6B5D]/20 transition-all">
+              <div className="absolute top-5 right-5 w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-xs font-medium text-text-secondary group-hover:bg-[#DCE4E0] group-hover:text-[#4A6B5D] group-hover:border-[#4A6B5D]/20 transition-all">
                 {String(idx + 1).padStart(2, '0')}
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-base font-medium text-[#2A2A2A] leading-tight pr-10">{sub.title}</h3>
-                  <p className="text-xs text-[#767676] font-light mt-1.5 leading-relaxed line-clamp-2">
+                  <h3 className="text-base font-medium text-text-primary leading-tight pr-10">{sub.title}</h3>
+                  <p className="text-xs text-text-secondary font-light mt-1.5 leading-relaxed line-clamp-2">
                     {SUBSECTION_DESC[sub.id] || `${sub.exercises.length} exercises in this session.`}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-black/[0.04] flex items-center justify-between">
-                  <span className="text-xs text-[#767676]">
-                    {sub.exercises.length} exercises {hasTimeBased && hasRepBased && <span className="text-[10px] text-[#767676] bg-[#FBFBF9] border border-black/[0.05] px-1.5 py-0.5 rounded-full ml-1">mixed</span>}
+                <div className="pt-4 border-t border-border flex items-center justify-between">
+                  <span className="text-xs text-text-secondary">
+                    {sub.exercises.length} exercises {hasTimeBased && hasRepBased && <span className="text-[10px] text-text-secondary bg-background border border-border px-1.5 py-0.5 rounded-full ml-1">mixed</span>}
                   </span>
                   <XpBadge xp={totalXp} />
                 </div>
@@ -707,27 +707,27 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
                 <button
                   onClick={() => handleSelectExercise(exercise)}
                   className={`w-full text-left rounded-[1rem] p-5 transition-all duration-250 border ${isSelected
-                    ? 'bg-white border-[#4A6B5D]/25 shadow-[0_8px_30px_-8px_rgba(74,107,93,0.15)]'
+                    ? 'bg-surface border-[#4A6B5D]/25 shadow-[0_8px_30px_-8px_rgba(74,107,93,0.15)]'
                     : isDone
                       ? 'bg-[#DCE4E0]/40 border-[#4A6B5D]/10'
-                      : 'bg-white border-black/[0.04] hover:border-[#4A6B5D]/15 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)]'
+                      : 'bg-surface border-border hover:border-[#4A6B5D]/15 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)]'
                     }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium ${isDone ? 'bg-[#4A6B5D]' : 'bg-[#FBFBF9]'}`}>
+                    <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium ${isDone ? 'bg-[#4A6B5D]' : 'bg-background'}`}>
                       {isDone ? <CheckCircle2 className="w-4 h-4 text-white" /> : String(idx + 1).padStart(2, '0')}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${isDone ? 'text-[#4A6B5D]' : 'text-[#2A2A2A]'}`}>{exercise.name}</p>
-                      <p className="text-xs text-[#767676] font-light mt-0.5">{exercise.target_reps ? `${exercise.target_reps} reps` : exercise.target_duration}</p>
+                      <p className={`text-sm font-medium truncate ${isDone ? 'text-[#4A6B5D]' : 'text-text-primary'}`}>{exercise.name}</p>
+                      <p className="text-xs text-text-secondary font-light mt-0.5">{exercise.target_reps ? `${exercise.target_reps} reps` : exercise.target_duration}</p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       {exercise.pose_analyzer ? (
                         <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#4A6B5D] bg-[#DCE4E0] px-2 py-0.5 rounded-full font-medium"><Camera className="w-2.5 h-2.5" />CV</span>
                       ) : (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#767676] bg-[#FBFBF9] border border-black/[0.05] px-2 py-0.5 rounded-full"><Clock className="w-2.5 h-2.5" />Timer</span>
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-text-secondary bg-background border border-border px-2 py-0.5 rounded-full"><Clock className="w-2.5 h-2.5" />Timer</span>
                       )}
                       <XpBadge xp={exercise.estimated_xp} />
                       {isDone && (
@@ -738,7 +738,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
                           <RotateCcw className="w-3.5 h-3.5 text-[#4A6B5D]" />
                         </button>
                       )}
-                      <ChevronRight className={`w-4 h-4 transition-all ${isSelected ? 'text-[#4A6B5D] rotate-90' : 'text-[#767676]'}`} />
+                      <ChevronRight className={`w-4 h-4 transition-all ${isSelected ? 'text-[#4A6B5D] rotate-90' : 'text-text-secondary'}`} />
                     </div>
                   </div>
                 </button>
@@ -770,27 +770,27 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
               </div>
             ) : (
               <motion.div
-                key="empty-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-[1.5rem] border border-dashed border-[#DCE4E0] p-10 flex flex-col items-center justify-center gap-4 text-center min-h-[300px]"
+                key="empty-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-surface rounded-[1.5rem] border border-dashed border-[#DCE4E0] p-10 flex flex-col items-center justify-center gap-4 text-center min-h-[300px]"
               >
                 <div className="w-12 h-12 rounded-full bg-[#DCE4E0] flex items-center justify-center"><BookOpen className="w-5 h-5 text-[#4A6B5D]" /></div>
-                <p className="text-sm text-[#767676] font-light max-w-[220px]">Select an exercise from the list to view its form cues.</p>
+                <p className="text-sm text-text-secondary font-light max-w-[220px]">Select an exercise from the list to view its form cues.</p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="bg-white rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)] border border-black/[0.03] flex items-center justify-between">
+          <div className="bg-surface rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.25)] border border-border flex items-center justify-between">
             <div>
-              <p className="text-xs text-[#767676] uppercase tracking-widest">Session XP Pool</p>
-              <p className="text-2xl font-light text-[#2A2A2A] mt-0.5">
+              <p className="text-xs text-text-secondary uppercase tracking-widest">Session XP Pool</p>
+              <p className="text-2xl font-light text-text-primary mt-0.5">
                 {subSection.exercises.reduce((sum, ex) => sum + ex.estimated_xp, 0)}
                 <span className="text-sm text-[#4A6B5D] ml-1">XP</span>
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-[#767676] uppercase tracking-widest">Completed</p>
+              <p className="text-xs text-text-secondary uppercase tracking-widest">Completed</p>
               <p className="text-2xl font-light text-[#4A6B5D] mt-0.5">
                 {completedExerciseIds.length}
-                <span className="text-sm text-[#767676] ml-1">/ {subSection.exercises.length}</span>
+                <span className="text-sm text-text-secondary ml-1">/ {subSection.exercises.length}</span>
               </p>
             </div>
           </div>
@@ -836,7 +836,7 @@ const Workout = () => {
   }, [completeWorkout, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#FBFBF9]">
+    <div className="min-h-screen bg-background transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14">
         <AnimatePresence mode="wait">
           {level === 1 && <ModalityDiscovery key="l1" onSelectModality={handleSelectModality} />}

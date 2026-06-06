@@ -44,7 +44,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#FBFBF9]">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -52,12 +52,12 @@ const Signup = () => {
         className="w-full max-w-md bg-[#FFFFFF] p-10 md:p-12 rounded-[1.5rem] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.08)]"
       >
         <div className="text-center mb-10 space-y-2">
-          <h1 className="text-3xl font-light text-[#2A2A2A] tracking-tight">Create Profile</h1>
-          <p className="text-[#767676] font-light">Join the platform to unlock your holistic dashboard.</p>
+          <h1 className="text-3xl font-light text-text-primary tracking-tight">Create Profile</h1>
+          <p className="text-text-secondary font-light">Join the platform to unlock your holistic dashboard.</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-[#FDE8E8] text-[#2A2A2A] rounded-xl text-sm text-center font-light border border-[#FBCFE8]/50">
+          <div className="mb-6 p-4 bg-[#FDE8E8] text-text-primary rounded-xl text-sm text-center font-light border border-[#FBCFE8]/50">
             {error}
           </div>
         )}
@@ -70,7 +70,7 @@ const Signup = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder="Full Name"
               disabled={isLoading}
-              className="w-full px-5 py-4 bg-[#FBFBF9] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-[#2A2A2A] transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
+              className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-text-primary transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
               required
             />
           </div>
@@ -81,7 +81,7 @@ const Signup = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email Address"
               disabled={isLoading}
-              className="w-full px-5 py-4 bg-[#FBFBF9] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-[#2A2A2A] transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
+              className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-text-primary transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
               required
             />
           </div>
@@ -92,7 +92,7 @@ const Signup = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Choose Password"
               disabled={isLoading}
-              className="w-full px-5 py-4 bg-[#FBFBF9] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-[#2A2A2A] transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
+              className="w-full px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A6B5D]/20 focus:border-[#4A6B5D] text-text-primary transition-all font-light placeholder:text-[#9CA3AF] disabled:opacity-50"
               required
             />
           </div>
@@ -107,7 +107,7 @@ const Signup = () => {
         </form>
         
         <div className="text-center mt-8">
-          <Link to="/login" className="text-sm text-[#767676] hover:text-[#4A6B5D] transition-colors font-light">
+          <Link to="/login" className="text-sm text-text-secondary hover:text-[#4A6B5D] transition-colors font-light">
             Already have an account? <span className="font-medium text-[#4A6B5D]">Sign in here</span>
           </Link>
         </div>

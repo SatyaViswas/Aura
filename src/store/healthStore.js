@@ -65,6 +65,8 @@ const useHealthStore = create(
       history: [],
       isActiveSession: false,
       cloudSyncStatus: isFirebaseConnected ? 'Cloud Sync Active' : 'Offline Local Storage Active',
+      // 'light' | 'dark' — controls the `dark` class on <html> via ThemeProvider
+      theme: 'light',
 
       // Real-Time Cloud Data Hydration & Synchronization Middleware
       hydrateUserFromCloud: async (uid) => {
@@ -211,6 +213,37 @@ const useHealthStore = create(
       },
 
       setIsActiveSession: (isActive) => set({ isActiveSession: isActive }),
+
+      /**
+       * toggleTheme
+       * Flips the theme between 'light' and 'dark'.  The ThemeProvider in
+       * App.jsx watches this value and applies / removes the `dark` class on
+       * <html> so all Tailwind dark: variants activate instantly.
+       */
+      toggleTheme: () => {
+        set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' }));
+      },
+
+      /**
+       * updateDailyTargets(newTargets)
+       * Merges a partial object of target overrides into `dailyGoals`.
+       * Only accepts the three editable target keys to prevent accidental
+       * pollution of logged progress values.
+       *
+       * @param {{ waterTarget?: number, calorieTarget?: number, focusTarget?: number }} newTargets
+       */
+      updateDailyTargets: (newTargets) => {
+        const allowed = ['waterTarget', 'calorieTarget', 'focusTarget'];
+        const safeTargets = Object.fromEntries(
+          Object.entries(newTargets)
+            .filter(([key]) => allowed.includes(key))
+            .map(([key, val]) => [key, Math.max(0, Number(val) || 0)])
+        );
+        set((state) => ({
+          dailyGoals: { ...state.dailyGoals, ...safeTargets }
+        }));
+        syncToCloud(get());
+      },
 
       addWater: (ml) => {
         set((state) => ({
@@ -391,7 +424,10 @@ const useHealthStore = create(
       partialize: (state) => ({
         user: state.user,
         dailyGoals: state.dailyGoals,
-        history: state.history
+        history: state.history,
+        // Persist theme preference so the user's dark/light choice survives
+        // page reloads without flashing the wrong mode on mount.
+        theme: state.theme
       }),
       // FIX: Custom merge rehydrator securely updates old localStorage files on boot
       merge: (persistedState, currentState) => {
@@ -399,6 +435,8 @@ const useHealthStore = create(
         return {
           ...currentState,
           ...persistedState,
+          // Preserve theme, defaulting to 'light' for first-time users
+          theme: persistedState.theme || 'light',
           user: {
             ...initialUserState,
             ...persistedState.user

@@ -162,7 +162,7 @@ const MentalHealth = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Nivi AI Companion Interface */}
         <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col h-[650px]">
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-[#E5E7EB]">
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-border">
             <div className="w-12 h-12 rounded-full bg-alert flex items-center justify-center text-primary font-medium text-lg shadow-inner">
               N
             </div>
@@ -183,7 +183,7 @@ const MentalHealth = () => {
                 >
                   <div
                     className={`max-w-[85%] p-5 rounded-2xl ${msg.role === 'user'
-                      ? 'bg-background text-text-primary rounded-tr-sm border border-[#E5E7EB]'
+                      ? 'bg-background text-text-primary rounded-tr-sm border border-border'
                       : 'bg-alert text-primary rounded-tl-sm'
                     }`}
                   >
@@ -229,7 +229,7 @@ const MentalHealth = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={isTyping}
-              className="flex-1 px-6 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm"
+              className="flex-1 px-6 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm"
             />
             <button
               type="submit"

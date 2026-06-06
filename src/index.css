@@ -3,13 +3,72 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-background: #FBFBF9;
+    --color-surface: #FFFFFF;
+    --color-border: rgba(42, 42, 42, 0.05);
+    --color-primary: #4A6B5D;
+    --color-text-primary: #2A2A2A;
+    --color-text-secondary: #767676;
+    --color-alert: #DCE4E0;
+    --shadow-natural: 0 10px 40px -10px rgba(42, 42, 42, 0.04);
+  }
+
+  html.dark {
+    --color-background: #1A1A1A;
+    --color-surface: #262626;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-primary: #6D8C7E;
+    --color-text-primary: #FBFBF9;
+    --color-text-secondary: #A3A3A3;
+    --color-alert: #2E3A35;
+    --shadow-natural: 0 10px 40px -10px rgba(0, 0, 0, 0.25);
+  }
+
   body {
-    background-color: #FBFBF9;
-    color: #2A2A2A;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* ── Legacy Hardcoded Tailwind Utility Overrides for Dark Mode ──────────────── */
+  html.dark .bg-white,
+  html.dark .bg-\[\#FFFFFF\] {
+    background-color: var(--color-surface) !important;
+  }
+
+  html.dark .bg-\[\#FBFBF9\] {
+    background-color: var(--color-background) !important;
+  }
+
+  html.dark .text-\[\#2A2A2A\] {
+    color: var(--color-text-primary) !important;
+  }
+
+  html.dark .text-\[\#767676\] {
+    color: var(--color-text-secondary) !important;
+  }
+
+  html.dark .bg-\[\#DCE4E0\] {
+    background-color: var(--color-alert) !important;
+  }
+
+  html.dark .text-\[\#4A6B5D\] {
+    color: var(--color-primary) !important;
+  }
+
+  html.dark .border-\[\#E5E7EB\],
+  html.dark .border-black\/\[0\.03\],
+  html.dark .border-black\/\[0\.04\],
+  html.dark .border-black\/\[0\.05\],
+  html.dark .border-black\/\[0\.06\],
+  html.dark .border-black\/5,
+  html.dark .border-black\/10 {
+    border-color: var(--color-border) !important;
   }
 }
