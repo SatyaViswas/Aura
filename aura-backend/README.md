@@ -1,11 +1,11 @@
-# Araise Backend - Exercise Tracking System
+# Aura Backend - Exercise Tracking System
 
 ## Project Structure
 
 This codebase is organized into a clean, modular structure for maintainability and scalability.
 
 ```
-araise_backend_code/
+aura-backend/
 ├── main.py                      # FastAPI application entry point
 ├── exercises/                   # Exercise trackers organized by body part
 │   ├── __init__.py             # Exports all exercise classes
