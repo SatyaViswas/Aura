@@ -210,7 +210,9 @@ const PoseAnalyzer = ({
 
   // Voice Assistant state
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
-  const lastSpokenFeedbackRef = useRef('');
+  const isVoiceEnabledRef = useRef(false);
+  const lastSpokenTextRef = useRef('');
+  const lastSpokenTimeRef = useRef(0);
 
   // Session completion
   const [sessionDone, setSessionDone] = useState(false);
@@ -351,8 +353,30 @@ const PoseAnalyzer = ({
           setStage(data.stage);
         }
 
-        if (typeof data.feedback === 'string' && data.feedback.trim()) {
-          setFeedback(data.feedback);
+        if (typeof data.feedback === 'string') {
+          const currentFeedback = data.feedback ? data.feedback.trim() : '';
+          
+          if (currentFeedback) {
+            setFeedback(currentFeedback);
+          }
+
+          if (currentFeedback && isVoiceEnabledRef.current) {
+            const now = Date.now();
+            
+            if (currentFeedback !== lastSpokenTextRef.current) {
+              window.speechSynthesis.cancel();
+              lastSpokenTextRef.current = currentFeedback;
+              lastSpokenTimeRef.current = now;
+              const utterance = new SpeechSynthesisUtterance(currentFeedback);
+              window.speechSynthesis.speak(utterance);
+            } else {
+              if (now - lastSpokenTimeRef.current >= 4000) {
+                lastSpokenTimeRef.current = now;
+                const utterance = new SpeechSynthesisUtterance(currentFeedback);
+                window.speechSynthesis.speak(utterance);
+              }
+            }
+          }
         }
 
         if (typeof data.angle === 'number') {
@@ -539,26 +563,7 @@ const PoseAnalyzer = ({
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 8 · Voice Assistant Effect
-  // ─────────────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (
-      isVoiceEnabled &&
-      feedback &&
-      feedback !== lastSpokenFeedbackRef.current
-    ) {
-      window.speechSynthesis.cancel();
-      lastSpokenFeedbackRef.current = feedback;
-      const utterance = new SpeechSynthesisUtterance(feedback);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [feedback, isVoiceEnabled]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // 9 · Session completion handler
+  // 8 · Session completion handler
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleEndSession = useCallback(() => {
@@ -604,7 +609,11 @@ const PoseAnalyzer = ({
           <button
             onClick={() => {
               if (isVoiceEnabled) window.speechSynthesis.cancel();
-              setIsVoiceEnabled((prev) => !prev);
+              setIsVoiceEnabled((prev) => {
+                const nextState = !prev;
+                isVoiceEnabledRef.current = nextState;
+                return nextState;
+              });
             }}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm border ${
               isVoiceEnabled

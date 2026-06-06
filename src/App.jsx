@@ -69,8 +69,18 @@ const AppContent = () => {
 
   const hydrateUserFromCloud = useHealthStore((state) => state.hydrateUserFromCloud);
   const logout = useHealthStore((state) => state.logout);
+  const checkDailyReset = useHealthStore((state) => state.checkDailyReset);
   const isActiveSession = useHealthStore((state) => state.isActiveSession);
   const theme = useHealthStore((state) => state.theme);
+
+  // Hook up periodic daily reset checks (runs on load, and check every 1 minute)
+  useEffect(() => {
+    checkDailyReset();
+    const interval = setInterval(() => {
+      checkDailyReset();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [checkDailyReset]);
 
   // Real-Time Firebase Auth Session Listener
   useEffect(() => {

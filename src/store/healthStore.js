@@ -1,10 +1,3 @@
-/**
- * @file healthStore.js
- * @description Production-grade global state store for Aura built with Zustand.
- * Handles user authentication pipelines, real-time Cloud Firestore synchronization,
- * defensive localStorage hydration merges, and real-time XP high-score calculations.
- */
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { auth, db, isFirebaseConnected } from '../config/firebase';
@@ -23,10 +16,10 @@ const initialDailyGoals = {
   focusLogged: 0,
   workoutsCompleted: false,
   mentalLogged: false,
-  // Persistent array of completed exercise ID strings.
   completedExerciseIds: [],
-  // Running tally of XP earned across all exercise completions for the current day.
-  dailyXpEarned: 0
+  dailyXpEarned: 0,
+  leveledUpToday: false,
+  streakIncrementedToday: false
 };
 
 const initialUserState = {
@@ -38,8 +31,103 @@ const initialUserState = {
   currentStreak: 0,
   lastActiveDate: null,
   isAuthenticated: false,
-  // Absolute personal-best watermark: the highest dailyXpEarned value ever recorded.
   highestDailyXp: 0
+};
+
+const calculateProgress = (goals) => {
+  const getClamped = (logged, target) => {
+    if (!target || target <= 0) return 0;
+    return Math.min(Math.max((logged / target) * 100, 0), 100);
+  };
+
+  const water = getClamped(goals.waterLogged, goals.waterTarget);
+  const diet = getClamped(goals.calorieLogged, goals.calorieTarget);
+  const focus = getClamped(goals.focusLogged, goals.focusTarget);
+  
+  const completedCount = goals.completedExerciseIds?.length || 0;
+  const workout = Math.min((completedCount / 4) * 100, 100);
+  const mental = goals.mentalLogged ? 100 : 0;
+
+  return (water + diet + focus + workout + mental) / 5;
+};
+
+const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
+  const today = new Date().toISOString().split('T')[0];
+  let updatedUser = { ...state.user, ...userUpdates };
+  let updatedGoals = { ...state.dailyGoals };
+  let updatedHistory = [...(state.history || [])];
+
+  // 1. Check if it is a new day before merging new goals
+  if (updatedUser.lastActiveDate && updatedUser.lastActiveDate !== today) {
+    const lastDate = updatedUser.lastActiveDate;
+    const d1 = new Date(lastDate);
+    const d2 = new Date(today);
+    d1.setHours(0,0,0,0);
+    d2.setHours(0,0,0,0);
+    const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
+
+    const activityDone =
+      (updatedGoals.waterLogged || 0) > 0 ||
+      (updatedGoals.calorieLogged || 0) > 0 ||
+      (updatedGoals.focusLogged || 0) > 0 ||
+      (updatedGoals.completedExerciseIds || []).length > 0 ||
+      updatedGoals.workoutsCompleted === true ||
+      updatedGoals.mentalLogged === true;
+
+    const streakKept = diffDays === 1 && activityDone;
+
+    updatedHistory.push({
+      date: lastDate,
+      goals: { ...updatedGoals },
+      streakKept
+    });
+
+    // Reset daily goals but retain targets
+    updatedGoals = { 
+        ...initialDailyGoals, 
+        waterTarget: updatedGoals.waterTarget,
+        calorieTarget: updatedGoals.calorieTarget,
+        focusTarget: updatedGoals.focusTarget
+    };
+
+    updatedUser.currentStreak = streakKept ? updatedUser.currentStreak : 0;
+    updatedUser.lastActiveDate = today;
+  }
+
+  // 2. Set lastActiveDate to today if null
+  if (!updatedUser.lastActiveDate) {
+    updatedUser.lastActiveDate = today;
+  }
+
+  // 3. Merge new goal updates safely (these apply to the CURRENT day now)
+  updatedGoals = { ...updatedGoals, ...goalUpdates };
+
+  // 4. Instantly increment streak if doing any activity and not already incremented today
+  const hasActivityToday =
+    (updatedGoals.waterLogged || 0) > 0 ||
+    (updatedGoals.calorieLogged || 0) > 0 ||
+    (updatedGoals.focusLogged || 0) > 0 ||
+    (updatedGoals.completedExerciseIds || []).length > 0 ||
+    updatedGoals.workoutsCompleted === true ||
+    updatedGoals.mentalLogged === true;
+
+  if (hasActivityToday && !updatedGoals.streakIncrementedToday) {
+    updatedGoals.streakIncrementedToday = true;
+    updatedUser.currentStreak = (updatedUser.currentStreak || 0) + 1;
+  }
+
+  // 5. Instantly level up if progress reaches 100% and not already leveled up today
+  const progress = calculateProgress(updatedGoals);
+  if (progress >= 100 && !updatedGoals.leveledUpToday) {
+    updatedGoals.leveledUpToday = true;
+    updatedUser.level = (updatedUser.level || 1) + 1;
+  }
+
+  return {
+    user: updatedUser,
+    dailyGoals: updatedGoals,
+    history: updatedHistory
+  };
 };
 
 const syncToCloud = async (state) => {
@@ -65,10 +153,8 @@ const useHealthStore = create(
       history: [],
       isActiveSession: false,
       cloudSyncStatus: isFirebaseConnected ? 'Cloud Sync Active' : 'Offline Local Storage Active',
-      // 'light' | 'dark' — controls the `dark` class on <html> via ThemeProvider
       theme: 'light',
 
-      // Real-Time Cloud Data Hydration & Synchronization Middleware
       hydrateUserFromCloud: async (uid) => {
         if (!isFirebaseConnected || !db) return;
         try {
@@ -77,63 +163,23 @@ const useHealthStore = create(
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const today = new Date().toISOString().split('T')[0];
 
-            // Defensive spreading forces fallback attributes to merge correctly
-            const cloudUser = { ...initialUserState, ...data.user };
+            const cloudUser = { ...initialUserState, ...data.user, isAuthenticated: true };
             const cloudGoals = { ...initialDailyGoals, ...data.dailyGoals };
             const cloudHistory = data.history || [];
 
-            // ── Scenario A: It is a New Day ───────────────────────────────────────
-            if (cloudUser.lastActiveDate !== today) {
-              let streakKept = false;
-
-              if (cloudUser.lastActiveDate !== null) {
-                const waterMet = cloudGoals.waterLogged >= cloudGoals.waterTarget;
-                const caloriesMet = cloudGoals.calorieLogged >= cloudGoals.calorieTarget;
-                const focusMet = cloudGoals.focusLogged >= cloudGoals.focusTarget;
-                const workoutMet = cloudGoals.workoutsCompleted === true;
-                const mentalMet = cloudGoals.mentalLogged === true;
-
-                if (waterMet && caloriesMet && focusMet && workoutMet && mentalMet) {
-                  streakKept = true;
-                }
-              }
-
-              const updatedHistory = [
-                ...cloudHistory,
-                {
-                  date: cloudUser.lastActiveDate,
-                  goals: cloudGoals,
-                  streakKept
-                }
-              ];
-
-              const resolvedUser = {
-                ...cloudUser,
-                isAuthenticated: true,
-                currentStreak: streakKept ? (cloudUser.currentStreak || 0) + 1 : 0,
-                lastActiveDate: today
-              };
-
-              const resolvedGoals = { ...initialDailyGoals };
-
-              set({
-                user: resolvedUser,
-                dailyGoals: resolvedGoals,
-                history: updatedHistory
-              });
-
-              syncToCloud(get());
-
-              // ── Scenario B: Same Day Session Resume ───────────────────────────────
-            } else {
-              set({
-                user: { ...cloudUser, isAuthenticated: true },
-                dailyGoals: { ...cloudGoals },
+            // Temporarily construct a state with cloud data
+            const cloudState = {
+                user: cloudUser,
+                dailyGoals: cloudGoals,
                 history: cloudHistory
-              });
-            }
+            };
+
+            // Process it through applyActivity to handle any date changes
+            const finalState = applyActivity(cloudState);
+            
+            set(finalState);
+            syncToCloud(get());
           }
         } catch (error) {
           console.warn("Failed to hydrate from cloud. Using baseline or local data:", error);
@@ -154,7 +200,8 @@ const useHealthStore = create(
               uid,
               email,
               name: displayName,
-              isAuthenticated: true
+              isAuthenticated: true,
+              lastActiveDate: new Date().toISOString().split('T')[0]
             },
             dailyGoals: { ...initialDailyGoals },
             history: []
@@ -214,24 +261,10 @@ const useHealthStore = create(
 
       setIsActiveSession: (isActive) => set({ isActiveSession: isActive }),
 
-      /**
-       * toggleTheme
-       * Flips the theme between 'light' and 'dark'.  The ThemeProvider in
-       * App.jsx watches this value and applies / removes the `dark` class on
-       * <html> so all Tailwind dark: variants activate instantly.
-       */
       toggleTheme: () => {
         set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' }));
       },
 
-      /**
-       * updateDailyTargets(newTargets)
-       * Merges a partial object of target overrides into `dailyGoals`.
-       * Only accepts the three editable target keys to prevent accidental
-       * pollution of logged progress values.
-       *
-       * @param {{ waterTarget?: number, calorieTarget?: number, focusTarget?: number }} newTargets
-       */
       updateDailyTargets: (newTargets) => {
         const allowed = ['waterTarget', 'calorieTarget', 'focusTarget'];
         const safeTargets = Object.fromEntries(
@@ -239,60 +272,42 @@ const useHealthStore = create(
             .filter(([key]) => allowed.includes(key))
             .map(([key, val]) => [key, Math.max(0, Number(val) || 0)])
         );
-        set((state) => ({
-          dailyGoals: { ...state.dailyGoals, ...safeTargets }
-        }));
+        set((state) => applyActivity(state, safeTargets));
         syncToCloud(get());
       },
 
       addWater: (ml) => {
-        set((state) => ({
-          dailyGoals: { ...state.dailyGoals, waterLogged: state.dailyGoals.waterLogged + ml }
-        }));
+        set((state) => applyActivity(state, { waterLogged: state.dailyGoals.waterLogged + ml }));
         syncToCloud(get());
       },
 
       logCalories: (cals, p, c, f) => {
-        set((state) => ({
-          dailyGoals: {
-            ...state.dailyGoals,
+        set((state) => applyActivity(state, {
             calorieLogged: state.dailyGoals.calorieLogged + cals,
             macroProtein: state.dailyGoals.macroProtein + p,
             macroCarbs: state.dailyGoals.macroCarbs + c,
             macroFat: state.dailyGoals.macroFat + f
-          }
         }));
         syncToCloud(get());
       },
 
       addFocusTime: (mins) => {
-        set((state) => ({
-          dailyGoals: { ...state.dailyGoals, focusLogged: state.dailyGoals.focusLogged + mins }
-        }));
+        set((state) => applyActivity(state, { focusLogged: state.dailyGoals.focusLogged + mins }));
         syncToCloud(get());
       },
 
       setMentalComplete: (bool) => {
-        set((state) => ({
-          dailyGoals: { ...state.dailyGoals, mentalLogged: bool }
-        }));
+        set((state) => applyActivity(state, { mentalLogged: bool }));
         syncToCloud(get());
       },
 
       completeWorkout: () => {
-        set((state) => ({
-          dailyGoals: { ...state.dailyGoals, workoutsCompleted: true }
-        }));
+        set((state) => applyActivity(state, { workoutsCompleted: true }));
         syncToCloud(get());
       },
 
-      /**
-       * logExerciseCompletion
-       * Synchronous Transaction Architecture: Combines values on a single execution
-       * thread to eliminate asynchronous UI updates or lag spikes.
-       */
       logExerciseCompletion: (exerciseId, xpAmount = 0) => {
-        const { dailyGoals, user, history } = get();
+        const { dailyGoals, user } = get();
         const existing = dailyGoals.completedExerciseIds || [];
 
         if (existing.includes(exerciseId)) return;
@@ -300,123 +315,60 @@ const useHealthStore = create(
         const updated = [...existing, exerciseId];
         const meetsGoal = updated.length >= 4;
 
-        // Force baseline numerical defaults to guarantee safe operations
         const currentDailyXp = Number(dailyGoals.dailyXpEarned) || 0;
         const currentHighestXp = Number(user.highestDailyXp) || 0;
 
         const newDailyXp = currentDailyXp + xpAmount;
         const newHighestDailyXp = newDailyXp > currentHighestXp ? newDailyXp : currentHighestXp;
 
-        const updatedGoals = {
-          ...dailyGoals,
+        const oldXp = Number(user.xp) || 0;
+        const newXp = oldXp + xpAmount;
+        const oldXpLevel = Math.floor(oldXp / 1000);
+        const newXpLevel = Math.floor(newXp / 1000);
+        const xpLevelsGained = newXpLevel - oldXpLevel;
+
+        const goalUpdates = {
           completedExerciseIds: updated,
           workoutsCompleted: meetsGoal ? true : dailyGoals.workoutsCompleted,
           dailyXpEarned: newDailyXp
         };
 
-        const updatedUser = {
-          ...user,
-          xp: (Number(user.xp) || 0) + xpAmount,
-          highestDailyXp: newHighestDailyXp
+        const userUpdates = {
+          xp: newXp,
+          highestDailyXp: newHighestDailyXp,
+          level: (Number(user.level) || 1) + xpLevelsGained
         };
 
-        // Mutate local store state synchronously
-        set({
-          dailyGoals: updatedGoals,
-          user: updatedUser
-        });
-
-        // Pipe directly to Firestore to prevent background race conditions
-        if (isFirebaseConnected && user?.uid) {
-          const userDocRef = doc(db, 'users', user.uid);
-          setDoc(userDocRef, {
-            user: updatedUser,
-            dailyGoals: updatedGoals,
-            history
-          }, { merge: true }).catch(err => console.warn("Firestore sync deferred:", err));
-        }
+        set((state) => applyActivity(state, goalUpdates, userUpdates));
+        syncToCloud(get());
       },
 
-      /**
-       * resetExerciseCompletion
-       * Rolls back individual exercise achievements synchronously, adjusting
-       * running daily totals while leaving the absolute highestDailyXp watermark intact.
-       */
       resetExerciseCompletion: (exerciseId, xpAmount = 0) => {
-        const { dailyGoals, user, history } = get();
+        const { dailyGoals, user } = get();
         const existing = dailyGoals.completedExerciseIds || [];
 
         const updated = existing.filter((id) => id !== exerciseId);
         const stillMeetsGoal = updated.length >= 4;
 
         const currentDailyXp = Number(dailyGoals.dailyXpEarned) || 0;
-        const currentHighestXp = Number(user.highestDailyXp) || 0;
 
-        const updatedGoals = {
-          ...dailyGoals,
+        const goalUpdates = {
           completedExerciseIds: updated,
           workoutsCompleted: stillMeetsGoal,
           dailyXpEarned: Math.max(0, currentDailyXp - xpAmount)
         };
 
-        const updatedUser = {
-          ...user,
+        const userUpdates = {
           xp: Math.max(0, (Number(user.xp) || 0) - xpAmount)
-          // highestDailyXp is omitted here to preserve historical records
         };
 
-        set({
-          dailyGoals: updatedGoals,
-          user: updatedUser
-        });
-
-        if (isFirebaseConnected && user?.uid) {
-          const userDocRef = doc(db, 'users', user.uid);
-          setDoc(userDocRef, {
-            user: updatedUser,
-            dailyGoals: updatedGoals,
-            history
-          }, { merge: true }).catch(err => console.warn("Firestore sync deferred:", err));
-        }
+        set((state) => applyActivity(state, goalUpdates, userUpdates));
+        syncToCloud(get());
       },
 
       checkDailyReset: () => {
-        const state = get();
-        const today = new Date().toISOString().split('T')[0];
-
-        if (state.user.lastActiveDate !== today) {
-          let streakKept = false;
-
-          if (state.user.lastActiveDate !== null) {
-            const waterMet = state.dailyGoals.waterLogged >= state.dailyGoals.waterTarget;
-            const caloriesMet = state.dailyGoals.calorieLogged >= state.dailyGoals.calorieTarget;
-            const focusMet = state.dailyGoals.focusLogged >= state.dailyGoals.focusTarget;
-            const workoutMet = state.dailyGoals.workoutsCompleted;
-            const mentalMet = state.dailyGoals.mentalLogged;
-
-            if (waterMet && caloriesMet && focusMet && workoutMet && mentalMet) {
-              streakKept = true;
-            }
-          }
-
-          set((state) => ({
-            history: [
-              ...state.history,
-              {
-                date: state.user.lastActiveDate,
-                goals: state.dailyGoals,
-                streakKept
-              }
-            ],
-            user: {
-              ...state.user,
-              currentStreak: streakKept ? state.user.currentStreak + 1 : 0,
-              lastActiveDate: today
-            },
-            dailyGoals: { ...initialDailyGoals }
-          }));
-          syncToCloud(get());
-        }
+        set((state) => applyActivity(state));
+        syncToCloud(get());
       }
     }),
     {
@@ -425,26 +377,16 @@ const useHealthStore = create(
         user: state.user,
         dailyGoals: state.dailyGoals,
         history: state.history,
-        // Persist theme preference so the user's dark/light choice survives
-        // page reloads without flashing the wrong mode on mount.
         theme: state.theme
       }),
-      // FIX: Custom merge rehydrator securely updates old localStorage files on boot
       merge: (persistedState, currentState) => {
         if (!persistedState) return currentState;
         return {
           ...currentState,
           ...persistedState,
-          // Preserve theme, defaulting to 'light' for first-time users
           theme: persistedState.theme || 'light',
-          user: {
-            ...initialUserState,
-            ...persistedState.user
-          },
-          dailyGoals: {
-            ...initialDailyGoals,
-            ...persistedState.dailyGoals
-          }
+          user: { ...initialUserState, ...persistedState.user },
+          dailyGoals: { ...initialDailyGoals, ...persistedState.dailyGoals }
         };
       }
     }
