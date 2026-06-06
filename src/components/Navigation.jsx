@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Activity, Target, User, Droplets, Flame, Brain, Dumbbell, Settings, LogOut, Sliders } from 'lucide-react';
+import { Home, Activity, Target, User, Droplets, Flame, Brain, Dumbbell, Settings, LogOut, Sliders, CalendarDays } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
 
 const Navigation = () => {
@@ -139,6 +139,12 @@ const Navigation = () => {
               Mind & Body
             </NavLink>
           </li>
+          <li>
+            <NavLink to="/history" className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg transition-colors ${isActive ? 'bg-alert text-primary font-medium' : 'text-text-secondary hover:bg-gray-50'}`}>
+              <CalendarDays className="w-5 h-5" />
+              History
+            </NavLink>
+          </li>
         </ul>
         
         {/* 2. Desktop Profile Dropdown Interface */}
@@ -174,14 +180,18 @@ const Navigation = () => {
       </nav>
 
       {/* Mobile Bottom Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface shadow-[0_-10px_40px_-10px_rgba(42,42,42,0.04)] px-6 py-4 flex justify-between items-center z-40 border-t border-[#E5E7EB]/50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface shadow-[0_-10px_40px_-10px_rgba(42,42,42,0.04)] px-4 py-4 flex justify-between items-center z-40 border-t border-[#E5E7EB]/50">
         <NavLink to="/dashboard" className={({isActive}) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
           <Home className="w-6 h-6" />
           <span className="text-[11px] font-medium tracking-wide">Home</span>
         </NavLink>
-        <NavLink to="/water" className={({isActive}) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
-          <Droplets className="w-6 h-6" />
-          <span className="text-[11px] font-medium tracking-wide">Water</span>
+        <NavLink to="/workout" className={({isActive}) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
+          <Dumbbell className="w-6 h-6" />
+          <span className="text-[11px] font-medium tracking-wide">Train</span>
+        </NavLink>
+        <NavLink to="/history" className={({isActive}) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
+          <CalendarDays className="w-6 h-6" />
+          <span className="text-[11px] font-medium tracking-wide">History</span>
         </NavLink>
         <NavLink to="/focus" className={({isActive}) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
           <Target className="w-6 h-6" />
