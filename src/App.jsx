@@ -14,6 +14,7 @@ import Diet from './pages/Diet';
 import Focus from './pages/Focus';
 import Workout from './pages/Workout';
 import MentalHealth from './pages/MentalHealth';
+import History from './pages/History';
 
 // Layout Components
 import Navigation from './components/Navigation';
@@ -116,6 +117,7 @@ const AppContent = () => {
           <Route path="/focus" element={<ProtectedRoute><Focus /></ProtectedRoute>} />
           <Route path="/workout" element={<ProtectedRoute><Workout /></ProtectedRoute>} />
           <Route path="/mental" element={<ProtectedRoute><MentalHealth /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           
           {/* Fallback routing logic */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
