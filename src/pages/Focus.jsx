@@ -10,6 +10,7 @@ const Focus = () => {
   const [isActive, setIsActive] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
+  const [customMinutes, setCustomMinutes] = useState('');
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -102,6 +103,35 @@ const Focus = () => {
     localStorage.removeItem('aura_timer_duration');
   };
 
+  const handleAddMinutes = (minutesToAdd) => {
+    const newTimeLeft = timeLeft + (minutesToAdd * 60);
+    setTimeLeft(newTimeLeft);
+    
+    // Update localStorage if timer is active
+    if (isActive) {
+      const endTimestamp = Date.now() + (newTimeLeft * 1000);
+      localStorage.setItem('aura_timer_endTimestamp', endTimestamp.toString());
+      localStorage.setItem('aura_timer_duration', newTimeLeft.toString());
+    }
+  };
+
+  const handleSetCustomDuration = (e) => {
+    e.preventDefault();
+    const minutes = parseInt(customMinutes, 10);
+    if (!isNaN(minutes) && minutes > 0) {
+      // Clear existing timer and set new duration
+      setIsActive(false);
+      const newDurationSeconds = minutes * 60;
+      setTimeLeft(newDurationSeconds);
+      
+      // Clear localStorage for fresh timer
+      localStorage.removeItem('aura_timer_endTimestamp');
+      localStorage.removeItem('aura_timer_duration');
+      
+      setCustomMinutes('');
+    }
+  };
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -173,6 +203,47 @@ const Focus = () => {
             >
               {isActive ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-1" />}
             </button>
+          </div>
+
+          {/* Quick-Add Time Controls */}
+          <div className="w-full max-w-md space-y-8 mt-12">
+            <div className="grid grid-cols-3 gap-4">
+              {[5, 10, 25].map((minutes) => (
+                <button
+                  key={minutes}
+                  onClick={() => handleAddMinutes(minutes)}
+                  className="py-4 px-2 bg-background border border-[#E5E7EB] rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> {minutes}m
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-[#E5E7EB]" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-surface px-4 text-sm text-text-secondary">or custom duration</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSetCustomDuration} className="flex gap-4">
+              <input
+                type="number"
+                placeholder="Enter custom minutes"
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(e.target.value)}
+                className="flex-1 px-5 py-4 bg-background border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all"
+                min="1"
+              />
+              <button
+                type="submit"
+                className="px-8 py-4 bg-primary text-white rounded-xl shadow-[0_0_12px_rgba(74,107,93,0.3)] hover:bg-opacity-90 transition-all font-medium tracking-wide"
+              >
+                Set
+              </button>
+            </form>
           </div>
         </div>
       </section>
