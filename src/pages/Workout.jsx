@@ -47,7 +47,7 @@ import PoseAnalyzer from '../components/PoseAnalyzer';
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } },
-  exit:    { opacity: 0, y: -12, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, y: -12, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } },
 };
 
 const cardStagger = {
@@ -93,50 +93,50 @@ const MODALITY_META = {
 // Track metadata map for Level 2 descriptor tags (duration, freq, difficulty)
 const TRACK_META = {
   // Gym
-  ppl:        { duration: '60–75 min', frequency: '3×/week', difficulty: 'Intermediate' },
+  ppl: { duration: '60–75 min', frequency: '3×/week', difficulty: 'Intermediate' },
   upperLower: { duration: '55–70 min', frequency: '4×/week', difficulty: 'Intermediate' },
-  fullBody:   { duration: '50–65 min', frequency: '3×/week', difficulty: 'Beginner–Int.' },
-  broSplit:   { duration: '45–60 min', frequency: '5×/week', difficulty: 'Intermediate' },
-  hybrid:     { duration: '60–80 min', frequency: '4×/week', difficulty: 'Advanced' },
+  fullBody: { duration: '50–65 min', frequency: '3×/week', difficulty: 'Beginner–Int.' },
+  broSplit: { duration: '45–60 min', frequency: '5×/week', difficulty: 'Intermediate' },
+  hybrid: { duration: '60–80 min', frequency: '4×/week', difficulty: 'Advanced' },
   // Calisthenics
-  beginner:        { duration: '30–40 min', frequency: '3×/week', difficulty: 'Beginner' },
-  intermediate:    { duration: '45–60 min', frequency: '4×/week', difficulty: 'Intermediate' },
-  advanced:        { duration: '60–90 min', frequency: '4×/week', difficulty: 'Advanced' },
-  skillProgression:{ duration: '40–60 min', frequency: '5×/week', difficulty: 'Advanced' },
+  beginner: { duration: '30–40 min', frequency: '3×/week', difficulty: 'Beginner' },
+  intermediate: { duration: '45–60 min', frequency: '4×/week', difficulty: 'Intermediate' },
+  advanced: { duration: '60–90 min', frequency: '4×/week', difficulty: 'Advanced' },
+  skillProgression: { duration: '40–60 min', frequency: '5×/week', difficulty: 'Advanced' },
   // Stretching & Yoga
-  stretching_daily: { duration: '15–20 min', frequency: 'Daily',   difficulty: 'All Levels' },
-  stretching_pre:   { duration: '10–15 min', frequency: 'Pre-WO',  difficulty: 'All Levels' },
-  stretching_post:  { duration: '12–18 min', frequency: 'Post-WO', difficulty: 'All Levels' },
-  yoga_flow:        { duration: '30–45 min', frequency: '3×/week', difficulty: 'Beginner' },
+  stretching_daily: { duration: '15–20 min', frequency: 'Daily', difficulty: 'All Levels' },
+  stretching_pre: { duration: '10–15 min', frequency: 'Pre-WO', difficulty: 'All Levels' },
+  stretching_post: { duration: '12–18 min', frequency: 'Post-WO', difficulty: 'All Levels' },
+  yoga_flow: { duration: '30–45 min', frequency: '3×/week', difficulty: 'Beginner' },
 };
 
 // Sub-section descriptor copy
 const SUBSECTION_DESC = {
-  push:              'Chest, shoulders & triceps — pushing strength foundations.',
-  pull:              'Back, biceps & rear delts — pulling power development.',
-  legs:              'Quads, hamstrings, glutes & calves — complete lower body.',
-  upper:             'Compound upper body strength across all planes.',
-  lower:             'Posterior & anterior chain loaded lower body work.',
-  workout:           'Full-body stimulus — balanced push, pull & legs in one.',
-  chest:             'Volume & intensity across the entire pectoral complex.',
-  back:              'Vertical & horizontal pull patterns for back thickness.',
-  arms:              'Isolated bicep & tricep development — peak definition.',
-  shoulders:         'Three-dimensional deltoid development & rotator health.',
-  strengthUpper:     'Heavy compound upper lifts — maximal force expression.',
-  strengthLower:     'Loaded squats, deadlifts & explosive plyometric output.',
-  conditioning:      'Metabolic conditioning — sustained aerobic power.',
-  recovery:          'Light movement to restore circulation and joint health.',
-  fullBody:          'Full-spectrum bodyweight fundamentals — build the base.',
-  pushPullLegs:      'Balanced push, pull & legs using only bodyweight.',
-  skillStrengthSplit:'Skill acquisition fused with high-output strength work.',
-  planche:           'Progressive planche pathway from frog hold to full.',
-  handstand:         'Inversion mastery — wall-assisted to freestanding.',
-  frontLever:        'Horizontal pulling strength and scapular control.',
-  muscleup:          'Bar transition pathway from explosive pull to lockout.',
-  daily_movement:    'Full-body joint articulation to start or reset the day.',
-  pre_workout:       'Dynamic activation to prime tissue for heavy loads.',
-  post_workout:      'Static holds to release muscle tension & restore length.',
-  beginner_yoga:     'Foundational asanas — breath, balance & presence.',
+  push: 'Chest, shoulders & triceps — pushing strength foundations.',
+  pull: 'Back, biceps & rear delts — pulling power development.',
+  legs: 'Quads, hamstrings, glutes & calves — complete lower body.',
+  upper: 'Compound upper body strength across all planes.',
+  lower: 'Posterior & anterior chain loaded lower body work.',
+  workout: 'Full-body stimulus — balanced push, pull & legs in one.',
+  chest: 'Volume & intensity across the entire pectoral complex.',
+  back: 'Vertical & horizontal pull patterns for back thickness.',
+  arms: 'Isolated bicep & tricep development — peak definition.',
+  shoulders: 'Three-dimensional deltoid development & rotator health.',
+  strengthUpper: 'Heavy compound upper lifts — maximal force expression.',
+  strengthLower: 'Loaded squats, deadlifts & explosive plyometric output.',
+  conditioning: 'Metabolic conditioning — sustained aerobic power.',
+  recovery: 'Light movement to restore circulation and joint health.',
+  fullBody: 'Full-spectrum bodyweight fundamentals — build the base.',
+  pushPullLegs: 'Balanced push, pull & legs using only bodyweight.',
+  skillStrengthSplit: 'Skill acquisition fused with high-output strength work.',
+  planche: 'Progressive planche pathway from frog hold to full.',
+  handstand: 'Inversion mastery — wall-assisted to freestanding.',
+  frontLever: 'Horizontal pulling strength and scapular control.',
+  muscleup: 'Bar transition pathway from explosive pull to lockout.',
+  daily_movement: 'Full-body joint articulation to start or reset the day.',
+  pre_workout: 'Dynamic activation to prime tissue for heavy loads.',
+  post_workout: 'Static holds to release muscle tension & restore length.',
+  beginner_yoga: 'Foundational asanas — breath, balance & presence.',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,11 +286,10 @@ const CountdownTimer = ({ exercise, onComplete }) => {
         <button
           onClick={toggleTimer}
           disabled={isDone}
-          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_24px_-4px_rgba(74,107,93,0.35)] transition-all ${
-            isDone
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_24px_-4px_rgba(74,107,93,0.35)] transition-all ${isDone
               ? 'bg-[#DCE4E0] text-[#4A6B5D] cursor-not-allowed'
               : 'bg-[#4A6B5D] hover:bg-[#3d5a4d] text-white hover:scale-105'
-          }`}
+            }`}
         >
           {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
@@ -473,11 +472,10 @@ const ExercisePreviewPane = ({ exercise, onClose, onBeginSession }) => {
       </div>
 
       {/* Pose analyzer badge */}
-      <div className={`inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-xs font-medium ${
-        exercise.pose_analyzer
+      <div className={`inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-xs font-medium ${exercise.pose_analyzer
           ? 'bg-[#DCE4E0] text-[#4A6B5D]'
           : 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]'
-      }`}>
+        }`}>
         {exercise.pose_analyzer ? (
           <>
             <Camera className="w-3 h-3" />
@@ -749,7 +747,12 @@ const SubSectionGrid = ({ track, onBack, onSelectSubSection }) => {
 const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [sessionExercise, setSessionExercise] = useState(null); // active tracking session
-  const [completedIds, setCompletedIds] = useState(new Set());
+
+  // ── Global persistent state (Zustand → localStorage → Firestore) ──────────
+  const completedExerciseIdsRaw = useHealthStore((state) => state.dailyGoals.completedExerciseIds);
+  const completedExerciseIds = completedExerciseIdsRaw || [];
+  const logExerciseCompletion = useHealthStore((state) => state.logExerciseCompletion);
+  const resetExerciseCompletion = useHealthStore((state) => state.resetExerciseCompletion);
 
   const handleBeginSession = (exercise) => {
     setSessionExercise(exercise);
@@ -762,16 +765,16 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
   /**
    * Called when a pose-analyzer session ends (user clicks "Complete & Log"
    * inside PoseAnalyzer, or the rep target is reached).
-   * Marks the exercise as done and returns to the roster view.
+   * Marks the exercise as done in the global store and returns to roster view.
    */
   const handlePoseSessionComplete = (exercise) => {
-    setCompletedIds((prev) => new Set([...prev, exercise.id]));
+    logExerciseCompletion(exercise.id);
     setSessionExercise(null);
     setSelectedExercise(null);
   };
 
   const handleTimerComplete = (exercise) => {
-    setCompletedIds((prev) => new Set([...prev, exercise.id]));
+    logExerciseCompletion(exercise.id);
     setSessionExercise(null);
   };
 
@@ -779,7 +782,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
     setSelectedExercise((prev) => (prev?.id === exercise.id ? null : exercise));
   };
 
-  const allDone = subSection.exercises.every((ex) => completedIds.has(ex.id));
+  const allDone = subSection.exercises.every((ex) => completedExerciseIds.includes(ex.id));
 
   return (
     <motion.div key="level-4" variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -841,37 +844,34 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
         <div className="space-y-3">
           {subSection.exercises.map((exercise, idx) => {
             const isSelected = selectedExercise?.id === exercise.id;
-            const isDone = completedIds.has(exercise.id);
+            const isDone = completedExerciseIds.includes(exercise.id);
 
             return (
               <motion.div key={exercise.id} layout>
                 <button
                   onClick={() => handleSelectExercise(exercise)}
-                  className={`w-full text-left rounded-[1rem] p-5 transition-all duration-250 border ${
-                    isSelected
+                  className={`w-full text-left rounded-[1rem] p-5 transition-all duration-250 border ${isSelected
                       ? 'bg-white border-[#4A6B5D]/25 shadow-[0_8px_30px_-8px_rgba(74,107,93,0.15)]'
                       : isDone
                         ? 'bg-[#DCE4E0]/40 border-[#4A6B5D]/10'
                         : 'bg-white border-black/[0.04] hover:border-[#4A6B5D]/15 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)] hover:shadow-[0_8px_30px_-8px_rgba(42,42,42,0.08)]'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-4">
                     {/* Index / done indicator */}
-                    <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                      isDone
+                    <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isDone
                         ? 'bg-[#4A6B5D] text-white'
                         : isSelected
                           ? 'bg-[#DCE4E0] text-[#4A6B5D]'
                           : 'bg-[#FBFBF9] text-[#767676] border border-black/[0.06]'
-                    }`}>
+                      }`}>
                       {isDone ? <CheckCircle2 className="w-4 h-4" /> : String(idx + 1).padStart(2, '0')}
                     </div>
 
                     {/* Name & meta */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium leading-tight truncate ${
-                        isDone ? 'text-[#4A6B5D]' : 'text-[#2A2A2A]'
-                      }`}>
+                      <p className={`text-sm font-medium leading-tight truncate ${isDone ? 'text-[#4A6B5D]' : 'text-[#2A2A2A]'
+                        }`}>
                         {exercise.name}
                       </p>
                       <p className="text-xs text-[#767676] font-light mt-0.5">
@@ -898,6 +898,24 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
                         </span>
                       )}
                       <XpBadge xp={exercise.estimated_xp} />
+                      {/*
+                        Scandi-Minimalist manual reset button — only visible when
+                        this exercise has already been marked complete.  Low opacity
+                        keeps it from competing with primary action targets.
+                        e.stopPropagation() ensures the detail tray is NOT opened.
+                      */}
+                      {isDone && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resetExerciseCompletion(exercise.id);
+                          }}
+                          title="Reset completion"
+                          className="opacity-40 hover:opacity-80 transition-opacity duration-200 w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#4A6B5D]/10"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                        </button>
+                      )}
                       <ChevronRight className={`w-4 h-4 transition-all ${isSelected ? 'text-[#4A6B5D] rotate-90' : 'text-[#767676]'}`} />
                     </div>
                   </div>
@@ -982,7 +1000,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
             <div className="text-right">
               <p className="text-xs text-[#767676] uppercase tracking-widest">Completed</p>
               <p className="text-2xl font-light text-[#4A6B5D] mt-0.5">
-                {completedIds.size}
+                {completedExerciseIds.length}
                 <span className="text-sm text-[#767676] ml-1">/ {subSection.exercises.length}</span>
               </p>
             </div>

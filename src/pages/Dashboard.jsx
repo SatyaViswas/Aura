@@ -15,7 +15,10 @@ const Dashboard = () => {
   const waterProgress = getClampedPercentage(dailyGoals.waterLogged, dailyGoals.waterTarget);
   const dietProgress = getClampedPercentage(dailyGoals.calorieLogged, dailyGoals.calorieTarget);
   const focusProgress = getClampedPercentage(dailyGoals.focusLogged, dailyGoals.focusTarget);
-  const workoutProgress = dailyGoals.workoutsCompleted ? 100 : 0;
+  // Workout progress: each completed exercise = 25%. 4 exercises = 100% (cap).
+  // Reads from the persistent `completedExerciseIds` array — NOT the legacy boolean.
+  const completedCount = dailyGoals.completedExerciseIds?.length || 0;
+  const workoutProgress = Math.min((completedCount / 4) * 100, 100);
   const mentalProgress = dailyGoals.mentalLogged ? 100 : 0;
 
   const masterDailyAverage = (waterProgress + dietProgress + focusProgress + workoutProgress + mentalProgress) / 5;
@@ -49,7 +52,7 @@ const Dashboard = () => {
         const wP = g.waterTarget > 0 ? (g.waterLogged / g.waterTarget) : 0;
         const dP = g.calorieTarget > 0 ? (g.calorieLogged / g.calorieTarget) : 0;
         const fP = g.focusTarget > 0 ? (g.focusLogged / g.focusTarget) : 0;
-        const someProgress = wP > 0 || dP > 0 || fP > 0 || g.workoutsCompleted || g.mentalLogged;
+        const someProgress = wP > 0 || dP > 0 || fP > 0 || (g.completedExerciseIds?.length > 0) || g.workoutsCompleted || g.mentalLogged;
         
         if (entry.streakKept) {
           status = 'full';

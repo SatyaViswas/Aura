@@ -15,7 +15,11 @@ const initialDailyGoals = {
   focusTarget: 60,
   focusLogged: 0,
   workoutsCompleted: false,
-  mentalLogged: false
+  mentalLogged: false,
+  // Persistent array of completed exercise ID strings.
+  // Automatically wiped at midnight via checkDailyReset(), persisted in
+  // localStorage via the `persist` middleware, and cloud-synced via syncToCloud().
+  completedExerciseIds: []
 };
 
 const initialUserState = {
@@ -190,6 +194,59 @@ const useHealthStore = create(
       completeWorkout: () => {
         set((state) => ({
           dailyGoals: { ...state.dailyGoals, workoutsCompleted: true }
+        }));
+        syncToCloud(get());
+      },
+
+      /**
+       * logExerciseCompletion(exerciseId)
+       * Appends the exercise ID string to `dailyGoals.completedExerciseIds` if it
+       * is not already present.  When the array reaches 4 or more entries the
+       * `workoutsCompleted` flag is automatically set to true, satisfying the
+       * daily workout streak requirement and triggering all downstream pipeline
+       * consumers (Dashboard progress ring, checkDailyReset streak evaluation).
+       */
+      logExerciseCompletion: (exerciseId) => {
+        const { dailyGoals } = get();
+        const existing = dailyGoals.completedExerciseIds || [];
+
+        // Guard: do not double-append
+        if (existing.includes(exerciseId)) return;
+
+        const updated = [...existing, exerciseId];
+        const meetsGoal = updated.length >= 4;
+
+        set((state) => ({
+          dailyGoals: {
+            ...state.dailyGoals,
+            completedExerciseIds: updated,
+            workoutsCompleted: meetsGoal ? true : state.dailyGoals.workoutsCompleted
+          }
+        }));
+        syncToCloud(get());
+      },
+
+      /**
+       * resetExerciseCompletion(exerciseId)
+       * Filters the specified exercise ID out of `dailyGoals.completedExerciseIds`,
+       * enabling a manual per-exercise rollback without waiting for the automated
+       * midnight calendar reset.  If the remaining array drops below 4 entries
+       * the `workoutsCompleted` flag is rolled back to false so the streak gate
+       * accurately reflects the current completion state.
+       */
+      resetExerciseCompletion: (exerciseId) => {
+        const { dailyGoals } = get();
+        const existing = dailyGoals.completedExerciseIds || [];
+
+        const updated = existing.filter((id) => id !== exerciseId);
+        const stillMeetsGoal = updated.length >= 4;
+
+        set((state) => ({
+          dailyGoals: {
+            ...state.dailyGoals,
+            completedExerciseIds: updated,
+            workoutsCompleted: stillMeetsGoal
+          }
         }));
         syncToCloud(get());
       },
