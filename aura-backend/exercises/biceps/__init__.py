@@ -1,0 +1,1 @@
+"""Biceps exercises module"""
