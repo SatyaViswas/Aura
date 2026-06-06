@@ -39,26 +39,25 @@ const MentalHealth = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Seamless track swap effect if changed mid-session
+  // Control playback based on breathingActive state
   useEffect(() => {
-    if (breathingActive && audioPlayerRef.current) {
+    if (!audioPlayerRef.current) return;
+    if (breathingActive) {
+      audioPlayerRef.current.play().catch(e => console.warn('Audio playback blocked:', e));
+    } else {
       audioPlayerRef.current.pause();
-      const currentTrackObj = audioTracks.find(t => t.id === selectedTrack);
-      audioPlayerRef.current = new Audio(currentTrackObj.url);
-      audioPlayerRef.current.loop = true;
-      audioPlayerRef.current.play().catch(e => console.log('Audio playback prevented:', e));
+    }
+  }, [breathingActive]);
+
+  // Control track change mid-session
+  useEffect(() => {
+    if (!audioPlayerRef.current) return;
+    if (breathingActive) {
+      audioPlayerRef.current.load();
+      audioPlayerRef.current.play().catch(e => console.warn('Audio playback blocked on track change:', e));
     }
   }, [selectedTrack]);
 
-  // Cleanup media element streams immediately on unmount to prevent leaked channels
-  useEffect(() => {
-    return () => {
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current = null;
-      }
-    };
-  }, []);
 
   // Asynchronous Chat Stream Handler (Untouched)
   const handleSendMessage = async (e) => {
@@ -135,15 +134,7 @@ const MentalHealth = () => {
     setBreathingActive(nextState);
 
     if (nextState) {
-      const trackObj = audioTracks.find(t => t.id === selectedTrack);
-      audioPlayerRef.current = new Audio(trackObj.url);
-      audioPlayerRef.current.loop = true;
-      audioPlayerRef.current.play().catch(e => console.warn('Audio playback initialization blocked:', e));
       setMentalComplete(true);
-    } else {
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
-      }
     }
   };
 
@@ -293,6 +284,11 @@ const MentalHealth = () => {
           </div>
         </section>
       </div>
+      <audio
+        ref={audioPlayerRef}
+        src={audioTracks.find(t => t.id === selectedTrack)?.url}
+        loop
+      />
     </motion.div>
   );
 };

@@ -117,9 +117,11 @@ const Dashboard = () => {
 
   // Derived XP progress
   const currentLevel = user.level || 1;
-  const xpPercentage = user.xp > 0
-    ? getClampedPercentage(user.xp % 1000, 1000)
-    : masterDailyAverage;
+  const xpPercentage = dailyGoals.leveledUpToday || masterDailyAverage >= 100
+    ? 100
+    : (user.xp > 0
+        ? getClampedPercentage(user.xp % 1000, 1000)
+        : masterDailyAverage);
 
   // Motion Architecture
   const containerVariants = {
