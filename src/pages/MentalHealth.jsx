@@ -1,23 +1,44 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Wind, Music } from 'lucide-react';
+import { Send, Wind, Music, Calendar, ChevronDown } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const MentalHealth = () => {
   const setMentalComplete = useHealthStore((state) => state.setMentalComplete);
+  const saveMentalChat = useHealthStore((state) => state.saveMentalChat);
+  const dailyGoals = useHealthStore((state) => state.dailyGoals);
+  const history = useHealthStore((state) => state.history);
 
-  // Conversational State and Multi-Turn History (Untouched)
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      role: 'model',
-      parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
-    }
-  ]);
+  // Conversational State and Multi-Turn History
+  const [selectedDate, setSelectedDate] = useState('today');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [messages, setMessages] = useState(
+    (dailyGoals.mentalChat && dailyGoals.mentalChat.length > 0) ? dailyGoals.mentalChat : [
+      {
+        id: 1,
+        role: 'model',
+        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+      }
+    ]
+  );
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Filter out dates that have mental chats logged (excluding today)
+  const chatDates = useMemo(() => {
+    return history
+      .filter((entry) => entry.goals?.mentalChat && entry.goals.mentalChat.length > 0)
+      .map((entry) => entry.date)
+      .sort((a, b) => b.localeCompare(a)); // newest first
+  }, [history]);
+
+  const formatDropdownDate = (isoDate) => {
+    if (isoDate === 'today') return 'Today';
+    const d = new Date(isoDate + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   // Breathing & Audio configuration states
   const [breathingActive, setBreathingActive] = useState(false);
@@ -37,9 +58,34 @@ const MentalHealth = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Load chat logs when date changes
+  useEffect(() => {
+    if (selectedDate === 'today') {
+      setMessages(
+        (dailyGoals.mentalChat && dailyGoals.mentalChat.length > 0) ? dailyGoals.mentalChat : [
+          {
+            id: 1,
+            role: 'model',
+            parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+          }
+        ]
+      );
+    } else {
+      const entry = history.find((e) => e.date === selectedDate);
+      if (entry && entry.goals?.mentalChat) {
+        setMessages(entry.goals.mentalChat);
+      }
+    }
+  }, [selectedDate]);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+    if (selectedDate === 'today') {
+      if (messages.length > 1 || messages[0].id !== 1) {
+        saveMentalChat(messages);
+      }
+    }
+  }, [messages, isTyping, saveMentalChat, selectedDate]);
 
   // Control playback based on breathingActive state
   useEffect(() => {
@@ -187,14 +233,85 @@ const MentalHealth = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Nivi AI Companion Interface */}
-        <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col h-[650px]">
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-border">
-            <div className="w-12 h-12 rounded-full bg-alert flex items-center justify-center text-primary font-medium text-lg shadow-inner">
-              N
+        <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col h-[650px] relative">
+          <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-alert flex items-center justify-center text-primary font-medium text-lg shadow-inner">
+                N
+              </div>
+              <div>
+                <h2 className="text-xl font-medium text-text-primary">Nivi</h2>
+                <p className="text-sm text-text-secondary">AI Companion</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-medium text-text-primary">Nivi</h2>
-              <p className="text-sm text-text-secondary">AI Companion</p>
+
+            {/* Minimialistic Date Selector Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-background border border-border text-xs text-text-secondary hover:text-text-primary hover:border-primary/20 transition-all font-light"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{selectedDate === 'today' ? 'Today' : formatDropdownDate(selectedDate)}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {isDropdownOpen && (
+                  <>
+                    {/* Invisible Backdrop to close on click outside */}
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsDropdownOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 mt-2 z-20 w-44 bg-surface border border-border rounded-xl shadow-xl p-1.5 flex flex-col space-y-0.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate('today');
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                          selectedDate === 'today'
+                            ? 'bg-[#DCE4E0] text-[#4A6B5D] font-medium'
+                            : 'text-text-secondary hover:bg-background hover:text-text-primary'
+                        }`}
+                      >
+                        <span>Today</span>
+                      </button>
+                      {chatDates.map((dateStr) => (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                            selectedDate === dateStr
+                              ? 'bg-[#DCE4E0] text-[#4A6B5D] font-medium'
+                              : 'text-text-secondary hover:bg-background hover:text-text-primary'
+                          }`}
+                        >
+                          <span>{formatDropdownDate(dateStr)}</span>
+                        </button>
+                      ))}
+                      {chatDates.length === 0 && (
+                        <div className="px-3 py-2 text-[10px] text-text-secondary/50 italic text-center">
+                          No past chats
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -239,15 +356,15 @@ const MentalHealth = () => {
           <form onSubmit={handleSendMessage} className="flex gap-4">
             <input
               type="text"
-              placeholder="Share what's on your mind..."
+              placeholder={selectedDate === 'today' ? "Share what's on your mind..." : "Viewing archived chat transcript"}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              disabled={isTyping}
-              className="flex-1 px-6 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm"
+              disabled={isTyping || selectedDate !== 'today'}
+              className="flex-1 px-6 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm disabled:opacity-50 disabled:bg-background"
             />
             <button
               type="submit"
-              disabled={!inputText.trim() || isTyping}
+              disabled={!inputText.trim() || isTyping || selectedDate !== 'today'}
               className="px-6 py-4 bg-primary text-white rounded-xl shadow-[0_10px_30px_-10px_rgba(74,107,93,0.4)] hover:bg-opacity-90 transition-all disabled:opacity-50 flex items-center justify-center"
             >
               <Send className="w-5 h-5" />

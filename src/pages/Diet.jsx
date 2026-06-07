@@ -35,7 +35,7 @@ const Diet = () => {
     const f = parseInt(fats, 10) || 0;
     
     if (c > 0) {
-      logCalories(c, p, cb, f);
+      logCalories(c, p, cb, f, mealName, activeTab);
       setMealName('');
       setCalories('');
       setProtein('');

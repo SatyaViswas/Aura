@@ -16,7 +16,7 @@
  *   └──────────────────────────────────────────────────────────────────────────┘
  */
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays,
@@ -32,6 +32,7 @@ import {
   ListChecks,
   ChevronRight,
   ChevronLeft,
+  X,
 } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
 
@@ -211,40 +212,176 @@ const MetricCard = ({ icon: Icon, pillarLabel, value, target, unit, progressPct,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MentalCard — simple boolean badge pill
+// NutritionMeals — expandable list of logged food
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MentalCard = ({ logged }) => (
-  <motion.div
-    variants={staggerItem}
-    className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border flex flex-col justify-between"
-  >
-    <PillarLabel icon={BrainCircuit} label="Mental Health" />
+const NutritionMeals = ({ meals }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!meals || meals.length === 0) return null;
 
-    <div className="flex items-center gap-4 mt-2">
-      <div
-        className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${logged ? 'bg-[#DCE4E0]' : 'bg-background border border-border'
-          }`}
+  return (
+    <div className="mt-4 pt-4 border-t border-border">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center justify-between w-full text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
       >
-        {logged ? (
-          <CheckCircle2 className="w-7 h-7 text-[#4A6B5D]" />
-        ) : (
-          <XCircle className="w-7 h-7 text-text-secondary/50" />
+        <span>View Logged Meals ({meals.length})</span>
+        <motion.div animate={{ rotate: expanded ? 90 : 0 }}>
+          <ChevronRight className="w-4 h-4" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mt-3 space-y-2"
+          >
+            {meals.map((meal, idx) => (
+              <div key={meal.id || idx} className="flex justify-between items-center p-3 rounded-lg bg-background border border-border text-sm">
+                <div>
+                  <p className="font-medium text-text-primary">{meal.name}</p>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">{meal.type}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-text-primary">{meal.cals} kcal</p>
+                  <p className="text-[10px] text-text-secondary tracking-wide mt-0.5">P:{meal.p}g C:{meal.c}g F:{meal.f}g</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
         )}
-      </div>
-      <div>
-        <p className={`text-base font-medium ${logged ? 'text-[#4A6B5D]' : 'text-text-secondary'}`}>
-          {logged ? 'Session Logged' : 'Not Recorded'}
-        </p>
-        <p className="text-xs text-text-secondary font-light mt-0.5">
-          {logged
-            ? 'Mindfulness practice completed for this day.'
-            : 'No mental wellness activity was recorded.'}
-        </p>
-      </div>
+      </AnimatePresence>
     </div>
-  </motion.div>
-);
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MentalCard — boolean badge pill + chat history
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MentalCard = ({ goals, date }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const logged = goals?.mentalLogged;
+  const chat = goals?.mentalChat || [];
+
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
+  return (
+    <motion.div
+      variants={staggerItem}
+      className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] border border-border flex flex-col justify-start"
+    >
+      <PillarLabel icon={BrainCircuit} label="Mental Health" />
+
+      <div className="flex items-center gap-4 mt-2">
+        <div
+          className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${logged ? 'bg-[#DCE4E0]' : 'bg-background border border-border'
+            }`}
+        >
+          {logged ? (
+            <CheckCircle2 className="w-7 h-7 text-[#4A6B5D]" />
+          ) : (
+            <XCircle className="w-7 h-7 text-text-secondary/50" />
+          )}
+        </div>
+        <div>
+          <p className={`text-base font-medium ${logged ? 'text-[#4A6B5D]' : 'text-text-secondary'}`}>
+            {logged ? 'Session Logged' : 'Not Recorded'}
+          </p>
+          <p className="text-xs text-text-secondary font-light mt-0.5">
+            {logged
+              ? 'Mindfulness practice completed for this day.'
+              : 'No mental wellness activity was recorded.'}
+          </p>
+        </div>
+      </div>
+
+      {chat.length > 1 && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-between w-full text-xs font-medium text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <span>View Chat Transcript</span>
+            <ChevronRight className="w-4 h-4 text-text-secondary" />
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="absolute inset-0 bg-background/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full max-w-lg bg-surface border border-border rounded-[1.5rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden z-10"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-5 border-b border-border flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="text-base font-medium text-text-primary">Chat Transcript</h3>
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">
+                    {date ? formatLongDate(date) : 'Mental Health'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Chat Message Scroll Area */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                {chat.map((msg, idx) => (
+                  <div
+                    key={msg.id || idx}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] p-4 rounded-2xl text-xs font-light whitespace-pre-wrap ${
+                        msg.role === 'user'
+                          ? 'bg-background border border-border text-text-primary rounded-tr-sm'
+                          : 'bg-alert text-primary rounded-tl-sm'
+                      }`}
+                    >
+                      {msg.parts[0].text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WorkoutCard — Training Analytics Engine
@@ -510,6 +647,7 @@ const DayDetailPane = ({ selectedDate, historyEntry }) => {
               ))}
             </div>
           )}
+          <NutritionMeals meals={goals.meals} />
         </MetricCard>
 
         {/* ── Deep Focus ──────────────────────────────────────────────────── */}
@@ -523,7 +661,7 @@ const DayDetailPane = ({ selectedDate, historyEntry }) => {
         />
 
         {/* ── Mental Health ───────────────────────────────────────────────── */}
-        <MentalCard logged={goals.mentalLogged} />
+        <MentalCard goals={goals} date={selectedDate} />
 
         {/* ── Training Analytics Engine ────────────────────────────────────
           Spans full width at the bottom of the grid so the ring and ID list

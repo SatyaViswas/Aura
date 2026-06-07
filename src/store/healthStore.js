@@ -47,7 +47,9 @@ const initialDailyGoals = {
   mealLogCount: 0,             // Meals logged today (XP capped at 3 logs)
   dietFullXpAwarded: false,    // 20 XP for hitting calorie target
   focusSessionsXpCount: 0,     // Pomodoros rewarded today (cap 3)
-  mentalXpAwarded: false       // 20 XP for completing mental health once/day
+  mentalXpAwarded: false,      // 20 XP for completing mental health once/day
+  meals: [],                   // Array of meals logged today
+  mentalChat: []               // Array of Nivi chat messages for today
 };
 
 const initialUserState = {
@@ -117,6 +119,12 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
       goals: { ...updatedGoals },
       streakKept
     });
+
+    // Keep only last 30 days of history
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+    updatedHistory = updatedHistory.filter(entry => entry.date >= cutoffDate);
 
     // Reset daily goals but retain targets
     updatedGoals = { 
@@ -343,7 +351,7 @@ const useHealthStore = create(
         syncToCloud(get());
       },
 
-      logCalories: (cals, p, c, f) => {
+      logCalories: (cals, p, c, f, mealName = '', mealType = '') => {
         set((state) => {
           const goals = state.dailyGoals;
           const user = state.user;
@@ -351,13 +359,17 @@ const useHealthStore = create(
           const target = goals.calorieTarget || 2200;
           const mealCount = (goals.mealLogCount || 0) + 1;
 
+          const newMeal = { id: Date.now(), name: mealName, type: mealType, cals, p, c, f };
+          const updatedMeals = [...(goals.meals || []), newMeal];
+
           let xpToAward = 0;
           const goalUpdates = {
             calorieLogged: newLogged,
             macroProtein: goals.macroProtein + p,
             macroCarbs: goals.macroCarbs + c,
             macroFat: goals.macroFat + f,
-            mealLogCount: mealCount
+            mealLogCount: mealCount,
+            meals: updatedMeals
           };
 
           // 5 XP per meal log, capped at 3 logs/day (max 15 XP)
@@ -432,6 +444,11 @@ const useHealthStore = create(
 
           return applyActivity(state, goalUpdates, userUpdates);
         });
+        syncToCloud(get());
+      },
+
+      saveMentalChat: (chatLog) => {
+        set((state) => applyActivity(state, { mentalChat: chatLog }));
         syncToCloud(get());
       },
 
