@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Wind, Music, Calendar, ChevronDown } from 'lucide-react';
+import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const MentalHealth = () => {
@@ -26,6 +26,21 @@ const MentalHealth = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Voice Mode State
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+  const [voiceGender, setVoiceGender] = useState('female');
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiSpeaking, setAiSpeaking] = useState(false);
+  const [micListening, setMicListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const handleSendMessageRef = useRef();
+  const isVoiceModeActiveRef = useRef(isVoiceModeActive);
+  const webAudioRef = useRef(new Audio());
+
+  useEffect(() => {
+    isVoiceModeActiveRef.current = isVoiceModeActive;
+  }, [isVoiceModeActive]);
+
   // Filter out dates that have mental chats logged (excluding today)
   const chatDates = useMemo(() => {
     return history
@@ -44,7 +59,7 @@ const MentalHealth = () => {
   const [breathingActive, setBreathingActive] = useState(false);
   const [breathPhase, setBreathPhase] = useState('ready'); // 'ready' | 'in' | 'hold' | 'out'
   const breathTimerRef = useRef(null);
-  const [selectedTrack, setSelectedTrack] = useState('40hz'); 
+  const [selectedTrack, setSelectedTrack] = useState('40hz');
   const audioPlayerRef = useRef(null);
 
   // Absolute paths pointing straight to your new public/audio folder structure
@@ -57,6 +72,7 @@ const MentalHealth = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
 
   // Load chat logs when date changes
   useEffect(() => {
@@ -132,17 +148,128 @@ const MentalHealth = () => {
   }, [breathingActive]);
 
 
-  // Asynchronous Chat Stream Handler (Untouched)
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping) return;
+  const handleResetChat = () => {
+    const defaultMessage = [
+      {
+        id: 1,
+        role: 'model',
+        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+      }
+    ];
+    // Wipe local UI state
+    setMessages(defaultMessage);
+    // Force wipe the dailyGoals state cache and sync an empty array to Firestore
+    saveMentalChat(defaultMessage);
+  };
 
-    const userText = inputText.trim();
+  // ── Dual-Engine Audio Pipeline ───────────────────────────────────────────
+  const speakResponse = async (textToSpeak) => {
+    try {
+      // Clear any currently playing audio stream immediately
+      if (webAudioRef.current) {
+        webAudioRef.current.pause();
+        webAudioRef.current.src = "";
+      }
+      setAiSpeaking(true);
+      
+      const response = await fetch('http://localhost:8000/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSpeak, gender: voiceGender })
+      });
+      
+      if (!response.ok) throw new Error("Failed to fetch server neural voice stream");
+      
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      
+      webAudioRef.current.src = audioUrl;
+      
+      // When the audio finishes playing naturally, restart the mic listener loop automatically
+      webAudioRef.current.onended = () => {
+        setAiSpeaking(false);
+        if (isVoiceModeActiveRef.current && recognitionRef.current) {
+          try { recognitionRef.current.start(); } catch(e) {}
+        }
+      };
+      
+      await webAudioRef.current.play();
+    } catch (error) {
+      console.warn("Neural audio playback failure:", error);
+      setAiSpeaking(false);
+    }
+  };
+
+  const toggleVoiceMode = () => {
+    const nextState = !isVoiceModeActive;
+    setIsVoiceModeActive(nextState);
+    if (nextState) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!recognitionRef.current && SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+
+        recognitionRef.current.onstart = () => setMicListening(true);
+        recognitionRef.current.onend = () => setMicListening(false);
+
+        // 3. Cross-Browser Mic Interruption (Barge-In)
+        recognitionRef.current.onsoundstart = () => {
+          if (webAudioRef.current && !webAudioRef.current.paused) {
+            webAudioRef.current.pause();
+            webAudioRef.current.src = "";
+            setAiSpeaking(false);
+            setMicListening(true);
+          }
+        };
+
+        recognitionRef.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript && handleSendMessageRef.current) {
+            handleSendMessageRef.current(null, transcript);
+          }
+        };
+      }
+      speakResponse("Hello, I am here. How are your mind and body feeling?");
+    } else {
+      // 4. CLEANUP ON CLOSING VOICE OVERLAY
+      if (webAudioRef.current) {
+        webAudioRef.current.pause();
+        webAudioRef.current.src = "";
+      }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) { }
+      }
+      setAiSpeaking(false);
+      setMicListening(false);
+      setAiProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (webAudioRef.current) {
+        webAudioRef.current.pause();
+        webAudioRef.current.src = "";
+      }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) { }
+      }
+    };
+  }, []);
+
+  // Asynchronous Chat Stream Handler
+  const handleSendMessage = async (e, forcedText = null) => {
+    if (e) e.preventDefault();
+    const userText = forcedText || inputText.trim();
+    if (!userText || isTyping || aiProcessing) return;
+
     const newUserMsg = { id: Date.now(), role: 'user', parts: [{ text: userText }] };
 
     setMessages((prev) => [...prev, newUserMsg]);
-    setInputText('');
+    if (!forcedText) setInputText('');
     setIsTyping(true);
+    if (isVoiceModeActive) setAiProcessing(true);
 
     try {
       if (!import.meta.env.VITE_GEMINI_API_KEY) {
@@ -150,11 +277,38 @@ const MentalHealth = () => {
       }
 
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash-lite',
-        systemInstruction: "You are Nivi, a serene, deeply empathetic, and grounded Scandinavian Mind & Body Health Companion built into the Aura platform. Your responses must feel like a calming meditation—clear, gentle, holistic, and completely free of sterile clinical coldness, rigid robotic formats, or excessive corporate exclamation marks. You specialize strictly in mindfulness, somatic grounding exercises, emotional validation, alignment suggestions, stress minimization, and daily balance. If users share physical fatigue, academic stress, or anxiety, reply with highly tailored, practical breathing prompts, journaling entry items, or gentle perspective shifts. Keep responses relatively concise (1-3 paragraphs maximum) to ensure high scannability inside a mobile-responsive chat view block."
-      });
 
+      const baseSystemInstruction = `You are Nivi, an advanced AI wellness, fitness, and productivity coach built into the Aura platform. You possess the full intelligence, creativity, and capabilities of a world-class AI, but your expertise is strictly focused on mastering these five pillars for the user:
+
+1. Training: Generate full workout plans, exercise splits, form cues, and fitness advice.
+2. Diet: Create meal plans, calculate macros/calories, and give nutrition advice.
+3. Deep Focus: Build productivity schedules, Pomodoro routines, and time-management strategies.
+4. Hydration: Provide water intake strategies and tracking advice.
+5. Mind & Body: Provide mental health support, stress management, and breathwork routines.
+
+### Core Directives:
+- BE FLEXIBLE AND POWERFUL: Act as a fully capable AI assistant. If the user asks for a 4-day gym split, write the complete plan. If they ask a random doubt related to these topics, answer it fully and scientifically.
+- NO OVER-APOLOGIZING: Never say "I cannot generate plans" or "I only focus on gentle movement." You are authorized to create aggressive workout plans, strict diets, or intense focus routines if the user wants them.
+- TONE: Expert, highly encouraging, adaptable, and direct. Use clean markdown (bullet points, bold text) for readability.
+- BOUNDARY PIVOT: If a user asks something completely unrelated to human optimization (e.g., writing Python code, politics, or math), gently pivot back: "I specialize entirely in your training, focus, diet, hydration, and mind-body balance! Let's get back to optimizing your day."`;
+
+      const voiceInstructionOverride = `
+
+[CRITICAL REAL-TIME VOICE PROTOCOL]
+- You are speaking aloud directly into the user's headphones or device speakers. Long paragraphs sound exhausting and ruin the conversational loop.
+- THE GOLDEN RULE: For standard questions, check-ins, or casual doubts, your response MUST be under 30 words (maximum of 1 or 2 short, crisp sentences). Answer instantly, clearly, and close the turn immediately to let the user reply.
+- THE VERBAL TRANSITION RULE: Start your phrases with punchy, natural verbal transitions like 'Got it,' 'Sure thing,' 'Absolutely,' or 'Let's track that.'
+- THE "PLAN GENERATION" EXCEPTION: If and only if the user explicitly demands a structured blueprint (e.g., 'Give me a full 3-day workout plan' or 'Write out a meal plan'), you are permitted to break the 30-word limit. However, format it as a highly condensed verbal outline (e.g., 'Day 1: Push exercises. Day 2: Pull exercises. Day 3: Legs. Want me to break down the exact reps for Day 1?'). Never list more than 3 bullet points at a time without checking in with the user first.
+- FORMATTING RESTRICTION: Strip away all raw markdown layout artifacts like asterisks (**), hashtags (#), or numerical headers. Speak in clean, unadorned conversational prose.`;
+
+      const systemInstruction = isVoiceModeActive
+        ? baseSystemInstruction + voiceInstructionOverride
+        : baseSystemInstruction;
+
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-3.1-flash-lite',
+        systemInstruction: systemInstruction
+      });
       const historyPayload = messages
         .filter((msg) => msg.id !== 1)
         .map((msg) => ({
@@ -172,21 +326,29 @@ const MentalHealth = () => {
       ]);
 
       setMentalComplete(true);
+      if (isVoiceModeActive) speakResponse(responseText);
 
     } catch (error) {
       console.warn("Nivi Generation Pipeline Exception:", error);
+      const errorMsg = "I'm currently resting my connection lines. Please take a slow, deep breath, and try again in a moment.";
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           role: 'model',
-          parts: [{ text: "I'm currently resting my connection lines. Please take a slow, deep breath, and try again in a moment." }]
+          parts: [{ text: errorMsg }]
         }
       ]);
+      if (isVoiceModeActive) speakResponse(errorMsg);
     } finally {
       setIsTyping(false);
+      setAiProcessing(false);
     }
   };
+
+  useEffect(() => {
+    handleSendMessageRef.current = handleSendMessage;
+  }, [handleSendMessage]);
 
   const toggleBreathing = () => {
     const nextState = !breathingActive;
@@ -199,25 +361,25 @@ const MentalHealth = () => {
 
   // ── Breathing phase label config ─────────────────────────────────────────
   const phaseConfig = {
-    ready: { label: 'Press begin',  sublabel: 'Follow the circle' },
-    in:    { label: 'Breathe In',   sublabel: '4 counts'          },
-    hold:  { label: 'Hold',         sublabel: '2 counts'          },
-    out:   { label: 'Breathe Out',  sublabel: '6 counts'          },
+    ready: { label: 'Press begin', sublabel: 'Follow the circle' },
+    in: { label: 'Breathe In', sublabel: '4 counts' },
+    hold: { label: 'Hold', sublabel: '2 counts' },
+    out: { label: 'Breathe Out', sublabel: '6 counts' },
   };
   const phase = phaseConfig[breathPhase];
 
   // Each ring: [diameter, border-opacity, bg-opacity, rotation-speed (s), rotation-dir, scale-factor]
   const rings = [
-    { d: 216, bOp: 0.08, bgOp: 0,    rot: 40,  dir: 1,  sf: 1.00 },
-    { d: 180, bOp: 0.12, bgOp: 0,    rot: 28,  dir: -1, sf: 0.97 },
-    { d: 144, bOp: 0.18, bgOp: 0.03, rot: 20,  dir: 1,  sf: 0.94 },
-    { d: 108, bOp: 0.26, bgOp: 0.06, rot: 14,  dir: -1, sf: 0.90 },
-    { d: 72,  bOp: 0.00, bgOp: 0.32, rot: 0,   dir: 1,  sf: 0.85 },
+    { d: 216, bOp: 0.08, bgOp: 0, rot: 40, dir: 1, sf: 1.00 },
+    { d: 180, bOp: 0.12, bgOp: 0, rot: 28, dir: -1, sf: 0.97 },
+    { d: 144, bOp: 0.18, bgOp: 0.03, rot: 20, dir: 1, sf: 0.94 },
+    { d: 108, bOp: 0.26, bgOp: 0.06, rot: 14, dir: -1, sf: 0.90 },
+    { d: 72, bOp: 0.00, bgOp: 0.32, rot: 0, dir: 1, sf: 0.85 },
   ];
 
   const expandedScale = 1.32;
-  const scaleTarget  = breathingActive && (breathPhase === 'in' || breathPhase === 'hold') ? expandedScale : 1;
-  const scaleDur     = breathPhase === 'in' ? 4 : breathPhase === 'hold' ? 0.5 : 6;
+  const scaleTarget = breathingActive && (breathPhase === 'in' || breathPhase === 'hold') ? expandedScale : 1;
+  const scaleDur = breathPhase === 'in' ? 4 : breathPhase === 'hold' ? 0.5 : 6;
 
   return (
     <motion.div
@@ -245,73 +407,85 @@ const MentalHealth = () => {
               </div>
             </div>
 
-            {/* Minimialistic Date Selector Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-background border border-border text-xs text-text-secondary hover:text-text-primary hover:border-primary/20 transition-all font-light"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{selectedDate === 'today' ? 'Today' : formatDropdownDate(selectedDate)}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
+            <div className="flex items-center gap-3">
+              {/* Clear Current Chat Action */}
+              {selectedDate === 'today' && (
+                <button
+                  type="button"
+                  onClick={handleResetChat}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-background border border-border text-xs text-text-secondary hover:text-red-600 hover:border-red-200 transition-all font-light"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear Chat</span>
+                </button>
+              )}
 
-              <AnimatePresence>
-                {isDropdownOpen && (
-                  <>
-                    {/* Invisible Backdrop to close on click outside */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setIsDropdownOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 z-20 w-44 bg-surface border border-border rounded-xl shadow-xl p-1.5 flex flex-col space-y-0.5"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedDate('today');
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                          selectedDate === 'today'
-                            ? 'bg-[#DCE4E0] text-[#4A6B5D] font-medium'
-                            : 'text-text-secondary hover:bg-background hover:text-text-primary'
-                        }`}
+              {/* Minimialistic Date Selector Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-background border border-border text-xs text-text-secondary hover:text-text-primary hover:border-primary/20 transition-all font-light"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{selectedDate === 'today' ? 'Today' : formatDropdownDate(selectedDate)}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <>
+                      {/* Invisible Backdrop to close on click outside */}
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setIsDropdownOpen(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 z-20 w-44 bg-surface border border-border rounded-xl shadow-xl p-1.5 flex flex-col space-y-0.5"
                       >
-                        <span>Today</span>
-                      </button>
-                      {chatDates.map((dateStr) => (
                         <button
-                          key={dateStr}
                           type="button"
                           onClick={() => {
-                            setSelectedDate(dateStr);
+                            setSelectedDate('today');
                             setIsDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                            selectedDate === dateStr
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedDate === 'today'
+                            ? 'bg-[#DCE4E0] text-[#4A6B5D] font-medium'
+                            : 'text-text-secondary hover:bg-background hover:text-text-primary'
+                            }`}
+                        >
+                          <span>Today</span>
+                        </button>
+                        {chatDates.map((dateStr) => (
+                          <button
+                            key={dateStr}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDate(dateStr);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${selectedDate === dateStr
                               ? 'bg-[#DCE4E0] text-[#4A6B5D] font-medium'
                               : 'text-text-secondary hover:bg-background hover:text-text-primary'
-                          }`}
-                        >
-                          <span>{formatDropdownDate(dateStr)}</span>
-                        </button>
-                      ))}
-                      {chatDates.length === 0 && (
-                        <div className="px-3 py-2 text-[10px] text-text-secondary/50 italic text-center">
-                          No past chats
-                        </div>
-                      )}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
+                              }`}
+                          >
+                            <span>{formatDropdownDate(dateStr)}</span>
+                          </button>
+                        ))}
+                        {chatDates.length === 0 && (
+                          <div className="px-3 py-2 text-[10px] text-text-secondary/50 italic text-center">
+                            No past chats
+                          </div>
+                        )}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
 
@@ -328,7 +502,7 @@ const MentalHealth = () => {
                     className={`max-w-[85%] p-5 rounded-2xl ${msg.role === 'user'
                       ? 'bg-background text-text-primary rounded-tr-sm border border-border'
                       : 'bg-alert text-primary rounded-tl-sm'
-                    }`}
+                      }`}
                   >
                     <p className="text-[15px] leading-relaxed font-light whitespace-pre-wrap">{msg.parts[0].text}</p>
                   </div>
@@ -353,7 +527,17 @@ const MentalHealth = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSendMessage} className="flex gap-4">
+          <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
+            {selectedDate === 'today' && (
+              <button
+                type="button"
+                onClick={toggleVoiceMode}
+                title="Activate Voice Mode"
+                className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/20 transition-all shadow-sm shrink-0"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+            )}
             <input
               type="text"
               placeholder={selectedDate === 'today' ? "Share what's on your mind..." : "Viewing archived chat transcript"}
@@ -365,7 +549,7 @@ const MentalHealth = () => {
             <button
               type="submit"
               disabled={!inputText.trim() || isTyping || selectedDate !== 'today'}
-              className="px-6 py-4 bg-primary text-white rounded-xl shadow-[0_10px_30px_-10px_rgba(74,107,93,0.4)] hover:bg-opacity-90 transition-all disabled:opacity-50 flex items-center justify-center"
+              className="px-6 py-4 bg-primary text-white rounded-xl shadow-[0_10px_30px_-10px_rgba(74,107,93,0.4)] hover:bg-opacity-90 transition-all disabled:opacity-50 flex items-center justify-center shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -388,11 +572,10 @@ const MentalHealth = () => {
                   <button
                     key={track.id}
                     onClick={() => setSelectedTrack(track.id)}
-                    className={`px-5 py-2.5 rounded-lg text-sm transition-all ${
-                      selectedTrack === track.id
-                        ? 'bg-surface text-primary shadow-sm font-medium'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`px-5 py-2.5 rounded-lg text-sm transition-all ${selectedTrack === track.id
+                      ? 'bg-surface text-primary shadow-sm font-medium'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     {track.name}
                   </button>
@@ -444,8 +627,8 @@ const MentalHealth = () => {
                       ? breathPhase === 'in'
                         ? [1, 1 + (0.5 * (1 - i * 0.1))]
                         : breathPhase === 'out'
-                        ? [1 + (0.5 * (1 - i * 0.1)), 1]
-                        : 1
+                          ? [1 + (0.5 * (1 - i * 0.1)), 1]
+                          : 1
                       : 0.6 + i * 0.08,
                     rotate: ring.rot > 0
                       ? breathingActive ? [0, 360 * ring.dir] : 0
@@ -521,6 +704,85 @@ const MentalHealth = () => {
         src={audioTracks.find(t => t.id === selectedTrack)?.url}
         loop
       />
+
+      {/* ── Fluid Voice Mode Overlay ── */}
+      <AnimatePresence>
+        {isVoiceModeActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/80 backdrop-blur-md"
+          >
+            {/* Header placeholder */}
+            <div className="w-full p-8 flex justify-center">
+              <span className="text-white/50 text-sm font-light tracking-widest uppercase">Nivi Voice Interface</span>
+            </div>
+
+            {/* Fluid Morphing Circle */}
+            <div className="flex-1 flex items-center justify-center relative w-full">
+              <motion.div
+                animate={{
+                  borderRadius: [
+                    "42% 58% 70% 30% / 45% 45% 55% 55%",
+                    "55% 45% 30% 70% / 60% 30% 70% 40%",
+                    "70% 30% 50% 50% / 30% 70% 50% 50%",
+                    "45% 55% 40% 60% / 55% 45% 60% 40%",
+                    "42% 58% 70% 30% / 45% 45% 55% 55%"
+                  ],
+                  scale: aiSpeaking ? [1, 1.3, 1] : micListening ? [1, 1.05, 1] : aiProcessing ? [0.9, 0.95, 0.9] : 1,
+                  rotate: aiProcessing ? 360 : 0
+                }}
+                transition={{
+                  borderRadius: { duration: 8, repeat: Infinity, ease: "linear" },
+                  scale: {
+                    duration: aiSpeaking ? 0.4 : micListening ? 3 : aiProcessing ? 2 : 1,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  },
+                  rotate: { duration: 10, repeat: Infinity, ease: "linear" }
+                }}
+                className={`w-64 h-64 shadow-[0_0_80px_rgba(74,107,93,0.6)] ${aiSpeaking ? 'bg-primary' : micListening ? 'bg-[#DCE4E0]' : 'bg-primary/50'}`}
+              />
+
+              {/* Status Text Overlay */}
+              <div className="absolute flex flex-col items-center">
+                <span className={`text-sm font-medium tracking-widest uppercase ${aiSpeaking ? 'text-white' : micListening ? 'text-primary' : 'text-white/80'}`}>
+                  {aiSpeaking ? "Speaking" : aiProcessing ? "Thinking" : micListening ? "Listening" : "Ready"}
+                </span>
+              </div>
+            </div>
+
+            {/* Overlay Control Deck */}
+            <div className="w-full pb-12 pt-6 flex flex-col items-center gap-8 bg-gradient-to-t from-black to-transparent">
+              {/* Voice Toggle Switch */}
+              <div className="flex items-center bg-white/10 rounded-full p-1 backdrop-blur-sm">
+                <button
+                  onClick={() => setVoiceGender('female')}
+                  className={`px-6 py-2 rounded-full text-xs font-medium transition-all ${voiceGender === 'female' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                >
+                  Female
+                </button>
+                <button
+                  onClick={() => setVoiceGender('male')}
+                  className={`px-6 py-2 rounded-full text-xs font-medium transition-all ${voiceGender === 'male' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                >
+                  Male
+                </button>
+              </div>
+
+              {/* Exit Button */}
+              <button
+                onClick={toggleVoiceMode}
+                className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/50 flex items-center justify-center transition-all shadow-[0_0_30px_rgba(239,68,68,0.2)] hover:shadow-[0_0_40px_rgba(239,68,68,0.6)] hover:scale-105"
+                title="Exit Voice Mode"
+              >
+                <X className="w-8 h-8" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
