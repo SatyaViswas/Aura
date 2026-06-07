@@ -129,7 +129,8 @@ const AppContent = () => {
     <div className="min-h-screen bg-background dark:bg-[#1A1A1A] flex">
       {!hideNav && <Navigation />}
 
-      <main className={`flex-1 w-full transition-all duration-300 ${!hideNav ? 'md:ml-64 pb-20 md:pb-0' : ''}`}>
+      <main className={`flex-1 w-full transition-all duration-300 ${!hideNav ? 'md:ml-64 pt-16 md:pt-0' : ''}`}>
+
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Welcome />} />

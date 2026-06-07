@@ -14,6 +14,8 @@ import {
   LogOut,
   Settings2,
   CalendarDays,
+  Menu,
+  X,
 } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
 
@@ -26,7 +28,8 @@ const Navigation = () => {
   const logout = useHealthStore((state) => state.logout);
 
   const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
-  const [isMobileMenuOpen,  setIsMobileMenuOpen]  = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
 
   const hiddenRoutes = ['/', '/login', '/signup'];
   if (hiddenRoutes.includes(location.pathname) || isActiveSession) {
@@ -82,6 +85,102 @@ const Navigation = () => {
 
   return (
     <>
+      {/* ── Mobile Top Navbar ────────────────────────────────────────────────── */}
+      <nav className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] px-6 flex items-center justify-between z-40 border-b border-border transition-colors duration-300">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="p-2 -ml-2 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-surface/5 transition-colors"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-2 text-[#4A6B5D] dark:text-[#6D8C7E]">
+            <Activity className="w-6 h-6" />
+            <span className="text-lg font-semibold tracking-wide">Aura</span>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Mobile Side Drawer ───────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isMobileDrawerOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 bg-[#2A2A2A]/20 dark:bg-black/40 backdrop-blur-[2px]"
+              onClick={() => setIsMobileDrawerOpen(false)}
+            />
+            {/* Drawer Body */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+              className="relative w-72 max-w-[80vw] h-full bg-surface shadow-[20px_0_40px_-10px_rgba(42,42,42,0.1)] dark:shadow-[20px_0_40px_-10px_rgba(0,0,0,0.4)] flex flex-col p-6 border-r border-border"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-2 text-[#4A6B5D] dark:text-[#6D8C7E]">
+                  <Activity className="w-8 h-8" />
+                  <span className="text-xl font-semibold tracking-wide">Aura</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-2 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-surface/5 transition-colors"
+                  aria-label="Close navigation menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Links */}
+              <ul className="flex flex-col gap-1 overflow-y-auto flex-1">
+                {[
+                  { to: '/dashboard', label: 'Dashboard',  Icon: Home        },
+                  { to: '/water',     label: 'Hydration',   Icon: Droplets    },
+                  { to: '/diet',      label: 'Nutrition',   Icon: Flame       },
+                  { to: '/focus',     label: 'Deep Work',   Icon: Target      },
+                  { to: '/workout',   label: 'Training',    Icon: Dumbbell    },
+                  { to: '/mental',    label: 'Mind & Body', Icon: Brain       },
+                  { to: '/history',   label: 'History',     Icon: CalendarDays },
+                  { to: '/settings',  label: 'Settings',     Icon: Settings2   },
+                ].map(({ to, label, Icon }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className={({ isActive }) => navLinkClass(isActive)}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Footer / Logout */}
+              <div className="pt-6 border-t border-[#E5E7EB] dark:border-white/10 mt-auto">
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileDrawerOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg text-text-secondary hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm font-medium"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ── Desktop Side Rail ────────────────────────────────────────────────── */}
       <nav className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-surface shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] p-6 z-40 border-r border-border transition-colors duration-300">
         <div className="mb-10 flex items-center gap-2 text-[#4A6B5D] dark:text-[#6D8C7E]">
@@ -152,68 +251,8 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* ── Mobile Bottom Bar ────────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface shadow-[0_-10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.3)] px-4 py-4 flex justify-between items-center z-40 border-t border-[#E5E7EB]/50 dark:border-white/[0.06] transition-colors duration-300">
-        {[
-          { to: '/dashboard', Icon: Home,         label: 'Home'    },
-          { to: '/workout',   Icon: Dumbbell,     label: 'Train'   },
-          { to: '/history',   Icon: CalendarDays, label: 'History' },
-          { to: '/focus',     Icon: Target,       label: 'Focus'   },
-        ].map(({ to, Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 transition-colors ${
-                isActive
-                  ? 'text-[#4A6B5D] dark:text-[#6D8C7E]'
-                  : 'text-text-secondary'
-              }`
-            }
-          >
-            <Icon className="w-6 h-6" />
-            <span className="text-[11px] font-medium tracking-wide">{label}</span>
-          </NavLink>
-        ))}
+      {/* Bottom bar removed — hamburger side drawer is the sole mobile nav */}
 
-        <button
-          onClick={() => setIsMobileMenuOpen(true)}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            isMobileMenuOpen
-              ? 'text-[#4A6B5D] dark:text-[#6D8C7E]'
-              : 'text-text-secondary'
-          }`}
-        >
-          <User className="w-6 h-6" />
-          <span className="text-[11px] font-medium tracking-wide">Profile</span>
-        </button>
-      </nav>
-
-      {/* ── Mobile Profile Modal ─────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-50 flex items-end">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-[#2A2A2A]/20 dark:bg-black/40 backdrop-blur-[2px]"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              className="relative w-full bg-surface rounded-t-[2rem] p-8 pb-12 shadow-[0_-20px_40px_-10px_rgba(42,42,42,0.1)] dark:shadow-[0_-20px_40px_-10px_rgba(0,0,0,0.4)]"
-            >
-              <div className="w-12 h-1.5 bg-[#E5E7EB] dark:bg-surface/10 rounded-full mx-auto mb-8" />
-              <ProfileMenu />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 };
