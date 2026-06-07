@@ -12,7 +12,7 @@
  * pose_analyzer === false → in-layout countdown timer widget
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -468,13 +468,53 @@ const ModalityDiscovery = ({ onSelectModality }) => {
     ...MODALITY_META[key],
   }));
 
-  // Fetch metrics directly to update the dashboard panels cleanly
-  const dailyXpEarned = useHealthStore((state) => state.dailyGoals?.dailyXpEarned ?? 0);
-  const highestDailyXp = useHealthStore((state) => state.user?.highestDailyXp ?? 0);
+  const completedExerciseIds = useHealthStore((state) => state.dailyGoals?.completedExerciseIds || []);
+  const highestTrainingXpFromStore = useHealthStore((state) => state.user?.highestTrainingXp ?? 0);
+
+  // Pre-calculate training-specific today's XP from completed exercises list
+  const exerciseXpMap = useMemo(() => {
+    const map = {};
+    Object.values(workoutData).forEach(modality => {
+      modality.tracks.forEach(track => {
+        track.subSections.forEach(sub => {
+          sub.exercises.forEach(ex => {
+            map[ex.id] = ex.estimated_xp || 0;
+          });
+        });
+      });
+    });
+    return map;
+  }, []);
+
+  const trainingXpEarned = useMemo(() => {
+    return completedExerciseIds.reduce((sum, id) => sum + (exerciseXpMap[id] || 0), 0);
+  }, [completedExerciseIds, exerciseXpMap]);
+
+  const highestTrainingXp = Math.max(highestTrainingXpFromStore, trainingXpEarned);
 
   return (
     <motion.div key="level-1" variants={pageVariants} initial="initial" animate="animate" exit="exit" className="space-y-10">
       <SectionHeader title="Training Library" subtitle="Select a discipline to explore your structured programs." />
+
+      {/* Visually Prominent Training-Specific XP Tracker Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-[1.5rem] bg-gradient-to-r from-[#4A6B5D] to-[#3d5a4d] dark:from-[#354f44] dark:to-[#2e3e35] text-white shadow-[0_10px_30px_rgba(74,107,93,0.15)] border border-[#4A6B5D]/20">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-[1rem] bg-white/10 flex items-center justify-center backdrop-blur-sm">
+            <Trophy className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium tracking-tight text-white/90">Training Performance</h3>
+            <p className="text-xs text-white/70 font-light mt-0.5">Discipline-specific effort & training XP tracker</p>
+          </div>
+        </div>
+
+        <div className="flex items-baseline gap-1.5 bg-white/10 px-6 py-3 rounded-xl backdrop-blur-sm">
+          <span className="text-3xl font-light tabular-nums">{trainingXpEarned}</span>
+          <span className="text-sm text-white/40 font-light">/</span>
+          <span className="text-xl font-normal text-white/90">{highestTrainingXp}</span>
+          <span className="text-xs text-white/90 font-medium ml-1">XP Today</span>
+        </div>
+      </div>
 
       <motion.div variants={cardStagger} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {modalities.map(({ key, title, icon: Icon, tagline, badge, bgDecor, tracks }) => (
@@ -507,7 +547,7 @@ const ModalityDiscovery = ({ onSelectModality }) => {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Programs', value: '13', icon: BookOpen },
           { label: 'Exercise Nodes', value: '196', icon: TrendingUp },
@@ -519,20 +559,6 @@ const ModalityDiscovery = ({ onSelectModality }) => {
             <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">{label}</span>
           </div>
         ))}
-
-        {/* Dynamic Card: Today's XP vs Lifetime Peak */}
-        <div className="bg-surface rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.25)] flex flex-col items-center justify-center gap-1 border border-border">
-          <Trophy className="w-4 h-4 text-[#4A6B5D] mb-1" />
-          <span className="text-2xl font-light text-text-primary tabular-nums">
-            {dailyXpEarned}
-            <span className="text-xs text-text-secondary/40 px-1 font-light">/</span>
-            <span className="text-base font-normal text-[#4A6B5D]">{highestDailyXp}</span>
-            <span className="text-[10px] text-[#4A6B5D] font-medium ml-0.5">XP</span>
-          </span>
-          <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">
-            Today vs Best Ever
-          </span>
-        </div>
       </div>
     </motion.div>
   );

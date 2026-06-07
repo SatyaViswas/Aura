@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion } from 'framer-motion';
-import { Flame } from 'lucide-react';
+import { Flame, Trophy } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 
 const Dashboard = () => {
@@ -115,13 +115,14 @@ const Dashboard = () => {
     return days;
   }, [history, dailyGoals]);
 
-  // Derived XP progress
+  // Progressive XP threshold: same formula as xpForNextLevel in the store.
+  // Level 1→2: 1000 XP, Level 2→3: 1200 XP, Level 3→4: 1400 XP, etc.
   const currentLevel = user.level || 1;
-  const xpPercentage = dailyGoals.leveledUpToday || masterDailyAverage >= 100
-    ? 100
-    : (user.xp > 0
-        ? getClampedPercentage(user.xp % 1000, 1000)
-        : masterDailyAverage);
+  const totalXp = Number(user.xp) || 0;
+  const xpThreshold = 1000 + (currentLevel - 1) * 200;
+  // XP sitting in the current level bucket (after prior level thresholds consumed)
+  const xpInCurrentLevel = totalXp % xpThreshold;
+  const xpPercentage = getClampedPercentage(xpInCurrentLevel, xpThreshold);
 
   // Motion Architecture
   const containerVariants = {
@@ -141,48 +142,69 @@ const Dashboard = () => {
       className="p-6 md:p-10 lg:p-14 max-w-7xl mx-auto space-y-12"
     >
       {/* 2. Greeting & Progression Card */}
-      <motion.section
-        variants={itemVariants}
-        className="bg-white dark:bg-[#262626] rounded-[1.5rem] p-8 md:p-10 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col gap-8 relative overflow-hidden border border-black/[0.03] dark:border-white/[0.05]"
-      >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-light text-[#2A2A2A] dark:text-[#FBFBF9] tracking-tight">
-              Good morning, <span className="font-medium">{user.name}</span>.
-            </h1>
-            <p className="text-[#767676] dark:text-[#A3A3A3] text-lg font-light flex items-center gap-2">
-              Level {currentLevel} •{' '}
-              <Flame className="w-5 h-5 text-[#4A6B5D] dark:text-[#6D8C7E]" strokeWidth={1.5} />{' '}
-              {user.currentStreak} Day Streak
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        <motion.section
+          variants={itemVariants}
+          className="lg:col-span-9 bg-white dark:bg-[#262626] rounded-[1.5rem] p-8 md:p-10 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col justify-between relative overflow-hidden border border-black/[0.03] dark:border-white/[0.05]"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl md:text-4xl font-light text-[#2A2A2A] dark:text-[#FBFBF9] tracking-tight">
+                Good morning, <span className="font-medium">{user.name}</span>.
+              </h1>
+              <p className="text-[#767676] dark:text-[#A3A3A3] text-lg font-light flex items-center gap-2">
+                Level {currentLevel} •{' '}
+                <Flame className="w-5 h-5 text-[#4A6B5D] dark:text-[#6D8C7E]" strokeWidth={1.5} />{' '}
+                {user.currentStreak} Day Streak
+              </p>
+            </div>
+
+            <div className="flex flex-col items-start md:items-end">
+              <span className="text-5xl font-light text-[#4A6B5D] dark:text-[#6D8C7E]">
+                {Math.round(masterDailyAverage)}%
+              </span>
+              <span className="text-[#767676] dark:text-[#A3A3A3] text-sm uppercase tracking-widest mt-1">
+                Today's Progress
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-col items-start md:items-end">
-            <span className="text-5xl font-light text-[#4A6B5D] dark:text-[#6D8C7E]">
-              {Math.round(masterDailyAverage)}%
-            </span>
-            <span className="text-[#767676] dark:text-[#A3A3A3] text-sm uppercase tracking-widest mt-1">
-              Daily Average
-            </span>
+          {/* Linear XP Progress Bar */}
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm font-medium text-[#767676] dark:text-[#A3A3A3]">
+              <span>Progress to Level {currentLevel + 1}</span>
+              <span>{Math.round(xpPercentage)}%</span>
+            </div>
+            <div className="w-full h-3 bg-[#DCE4E0] dark:bg-[#2E3A35] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-[#4A6B5D] dark:bg-[#6D8C7E]"
+                initial={{ width: 0 }}
+                animate={{ width: `${xpPercentage}%` }}
+                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.2 }}
+              />
+            </div>
           </div>
-        </div >
+        </motion.section>
 
-        {/* Linear XP Progress Bar */}
-        < div className="space-y-3" >
-          <div className="flex justify-between text-sm font-medium text-[#767676] dark:text-[#A3A3A3]">
-            <span>Progress to Level {currentLevel + 1}</span>
-            <span>{Math.round(xpPercentage)}%</span>
+        {/* Dynamic Card: Today's XP vs Lifetime Peak */}
+        <motion.section
+          variants={itemVariants}
+          className="lg:col-span-3 bg-white dark:bg-[#262626] rounded-[1.5rem] p-8 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col items-center justify-center gap-3 border border-black/[0.03] dark:border-white/[0.05] text-center"
+        >
+          <div className="w-12 h-12 rounded-[1rem] bg-[#DCE4E0] dark:bg-[#2E3A35] flex items-center justify-center mb-1">
+            <Trophy className="w-6 h-6 text-[#4A6B5D] dark:text-[#6D8C7E]" />
           </div>
-          <div className="w-full h-3 bg-[#DCE4E0] dark:bg-[#2E3A35] rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-[#4A6B5D] dark:bg-[#6D8C7E]"
-              initial={{ width: 0 }}
-              animate={{ width: `${xpPercentage}%` }}
-              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.2 }}
-            />
-          </div>
-        </div >
-      </motion.section >
+          <span className="text-3xl font-light text-[#2A2A2A] dark:text-[#FBFBF9] tabular-nums flex items-baseline justify-center">
+            {dailyGoals.dailyXpEarned || 0}
+            <span className="text-sm text-[#767676] dark:text-[#A3A3A3] px-1 font-light">/</span>
+            <span className="text-xl font-normal text-[#4A6B5D] dark:text-[#6D8C7E]">{user.highestDailyXp || 0}</span>
+            <span className="text-xs text-[#4A6B5D] dark:text-[#6D8C7E] font-medium ml-1">XP</span>
+          </span>
+          <span className="text-xs text-[#767676] dark:text-[#A3A3A3] uppercase tracking-widest font-light">
+            Today vs Best Ever
+          </span>
+        </motion.section>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         {/* 3. Pentagon Radar Chart */}

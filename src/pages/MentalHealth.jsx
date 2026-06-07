@@ -21,6 +21,8 @@ const MentalHealth = () => {
 
   // Breathing & Audio configuration states
   const [breathingActive, setBreathingActive] = useState(false);
+  const [breathPhase, setBreathPhase] = useState('ready'); // 'ready' | 'in' | 'hold' | 'out'
+  const breathTimerRef = useRef(null);
   const [selectedTrack, setSelectedTrack] = useState('40hz'); 
   const audioPlayerRef = useRef(null);
 
@@ -57,6 +59,31 @@ const MentalHealth = () => {
       audioPlayerRef.current.play().catch(e => console.warn('Audio playback blocked on track change:', e));
     }
   }, [selectedTrack]);
+
+  // Breathing phase cycle: 4s in → 2s hold → 6s out → repeat
+  useEffect(() => {
+    if (!breathingActive) {
+      setBreathPhase('ready');
+      clearTimeout(breathTimerRef.current);
+      return;
+    }
+
+    const cycle = () => {
+      setBreathPhase('in');
+      breathTimerRef.current = setTimeout(() => {
+        setBreathPhase('hold');
+        breathTimerRef.current = setTimeout(() => {
+          setBreathPhase('out');
+          breathTimerRef.current = setTimeout(() => {
+            cycle();
+          }, 6000);
+        }, 2000);
+      }, 4000);
+    };
+
+    cycle();
+    return () => clearTimeout(breathTimerRef.current);
+  }, [breathingActive]);
 
 
   // Asynchronous Chat Stream Handler (Untouched)
@@ -115,20 +142,6 @@ const MentalHealth = () => {
     }
   };
 
-  // Harmonious, steady 8s circle animation (4s expansion / 4s retraction)
-  const getBreathAnimation = () => {
-    if (!breathingActive) return { scale: 1, opacity: 0.5 };
-    return {
-      scale: [1, 1.4, 1],
-      opacity: [0.5, 1, 0.5],
-      transition: {
-        duration: 8,
-        ease: "easeInOut",
-        repeat: Infinity
-      }
-    };
-  };
-
   const toggleBreathing = () => {
     const nextState = !breathingActive;
     setBreathingActive(nextState);
@@ -137,6 +150,28 @@ const MentalHealth = () => {
       setMentalComplete(true);
     }
   };
+
+  // ── Breathing phase label config ─────────────────────────────────────────
+  const phaseConfig = {
+    ready: { label: 'Press begin',  sublabel: 'Follow the circle' },
+    in:    { label: 'Breathe In',   sublabel: '4 counts'          },
+    hold:  { label: 'Hold',         sublabel: '2 counts'          },
+    out:   { label: 'Breathe Out',  sublabel: '6 counts'          },
+  };
+  const phase = phaseConfig[breathPhase];
+
+  // Each ring: [diameter, border-opacity, bg-opacity, rotation-speed (s), rotation-dir, scale-factor]
+  const rings = [
+    { d: 216, bOp: 0.08, bgOp: 0,    rot: 40,  dir: 1,  sf: 1.00 },
+    { d: 180, bOp: 0.12, bgOp: 0,    rot: 28,  dir: -1, sf: 0.97 },
+    { d: 144, bOp: 0.18, bgOp: 0.03, rot: 20,  dir: 1,  sf: 0.94 },
+    { d: 108, bOp: 0.26, bgOp: 0.06, rot: 14,  dir: -1, sf: 0.90 },
+    { d: 72,  bOp: 0.00, bgOp: 0.32, rot: 0,   dir: 1,  sf: 0.85 },
+  ];
+
+  const expandedScale = 1.32;
+  const scaleTarget  = breathingActive && (breathPhase === 'in' || breathPhase === 'hold') ? expandedScale : 1;
+  const scaleDur     = breathPhase === 'in' ? 4 : breathPhase === 'hold' ? 0.5 : 6;
 
   return (
     <motion.div
@@ -191,21 +226,9 @@ const MentalHealth = () => {
                   className="flex justify-start"
                 >
                   <div className="p-5 rounded-2xl bg-alert text-primary rounded-tl-sm flex items-center gap-2">
-                    <motion.div
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.div
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
-                    />
-                    <motion.div
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
-                    />
+                    <motion.div className="w-1.5 h-1.5 bg-primary/60 rounded-full" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0 }} />
+                    <motion.div className="w-1.5 h-1.5 bg-primary/60 rounded-full" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} />
+                    <motion.div className="w-1.5 h-1.5 bg-primary/60 rounded-full" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }} />
                   </div>
                 </motion.div>
               )}
@@ -238,7 +261,7 @@ const MentalHealth = () => {
             <h2 className="text-2xl font-light text-text-primary mb-2">Breathwork</h2>
             <p className="text-text-secondary text-[15px] font-light mb-8">Synchronize your breath to the expanding circle to trigger a parasympathetic response.</p>
 
-            {/* Ambient Sound Selector Tabs with Exact File Names */}
+            {/* Ambient Sound Selector Tabs */}
             <div className="space-y-2">
               <label className="text-xs uppercase tracking-widest text-text-secondary font-medium flex items-center gap-1.5 mb-3">
                 <Music className="w-3.5 h-3.5" /> Ambient Soundscape
@@ -249,8 +272,8 @@ const MentalHealth = () => {
                     key={track.id}
                     onClick={() => setSelectedTrack(track.id)}
                     className={`px-5 py-2.5 rounded-lg text-sm transition-all ${
-                      selectedTrack === track.id 
-                        ? 'bg-surface text-primary shadow-sm font-medium' 
+                      selectedTrack === track.id
+                        ? 'bg-surface text-primary shadow-sm font-medium'
                         : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
@@ -261,19 +284,111 @@ const MentalHealth = () => {
             </div>
           </div>
 
-          {/* Central Animated Target Interface */}
-          <div className="flex-1 flex items-center justify-center relative z-0 mt-4">
-            <motion.div
-              className="w-48 h-48 rounded-full bg-primary/10 flex items-center justify-center"
-              animate={getBreathAnimation()}
-            >
-              <div className="w-36 h-36 rounded-full bg-primary/20 flex items-center justify-center">
-                <div className="w-24 h-24 rounded-full bg-primary/40 shadow-inner" />
-              </div>
-            </motion.div>
+          {/* ── Multi-Circle Soothing Breathing Animation ── */}
+          <div className="flex-1 flex items-center justify-center relative z-0 mt-2">
+            <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
+
+              {/* Wide ambient glow that breathes softly behind all rings */}
+              <AnimatePresence>
+                {breathingActive && (
+                  <motion.div
+                    key="glow"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{
+                      opacity: [0.0, 0.08, 0.0],
+                      scale: [1, scaleTarget * 1.18, 1],
+                    }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: breathPhase === 'in' ? 4 : breathPhase === 'hold' ? 0.5 : 6,
+                      ease: [0.43, 0.13, 0.23, 0.96],
+                      repeat: 0,
+                    }}
+                    className="absolute rounded-full bg-primary"
+                    style={{ width: 280, height: 280 }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Concentric rings with staggered scale, rotation, and opacity */}
+              {rings.map((ring, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute rounded-full"
+                  style={{
+                    width: ring.d,
+                    height: ring.d,
+                    border: ring.bOp > 0 ? `1px solid rgba(74,107,93,${ring.bOp})` : 'none',
+                    backgroundColor: ring.bgOp > 0 ? `rgba(74,107,93,${ring.bgOp})` : 'transparent',
+                  }}
+                  animate={{
+                    scale: breathingActive ? scaleTarget * ring.sf : ring.sf * 0.98,
+                    opacity: breathingActive
+                      ? breathPhase === 'in'
+                        ? [1, 1 + (0.5 * (1 - i * 0.1))]
+                        : breathPhase === 'out'
+                        ? [1 + (0.5 * (1 - i * 0.1)), 1]
+                        : 1
+                      : 0.6 + i * 0.08,
+                    rotate: ring.rot > 0
+                      ? breathingActive ? [0, 360 * ring.dir] : 0
+                      : 0,
+                  }}
+                  transition={{
+                    scale: {
+                      duration: scaleDur,
+                      ease: [0.43, 0.13, 0.23, 0.96],
+                    },
+                    opacity: {
+                      duration: breathPhase === 'in' ? 4 : breathPhase === 'out' ? 6 : 0.5,
+                      ease: 'easeInOut',
+                    },
+                    rotate: {
+                      duration: ring.rot,
+                      ease: 'linear',
+                      repeat: Infinity,
+                      repeatType: 'loop',
+                    },
+                  }}
+                />
+              ))}
+
+              {/* Solid core dot */}
+              <motion.div
+                className="absolute rounded-full bg-primary"
+                style={{ width: 9, height: 9 }}
+                animate={{
+                  scale: breathingActive ? (breathPhase === 'in' || breathPhase === 'hold' ? 2 : 1) : 1,
+                  opacity: breathingActive ? 1 : 0.45,
+                }}
+                transition={{ duration: breathPhase === 'in' ? 4 : 6, ease: 'easeInOut' }}
+              />
+            </div>
           </div>
 
-          <div className="z-10 relative flex justify-center mt-6">
+          {/* Breathing phase label below animation */}
+          <div className="flex flex-col items-center justify-center h-14 z-10 relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={breathPhase}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="flex flex-col items-center gap-0.5"
+              >
+                <span className="text-base font-medium text-primary tracking-wide">
+                  {phase.label}
+                </span>
+                <span className="text-xs text-text-secondary uppercase tracking-widest font-medium">
+                  {phase.sublabel}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Begin / Stop button */}
+          <div className="z-10 relative flex justify-center mt-4">
             <button
               onClick={toggleBreathing}
               className="px-10 py-5 bg-primary text-white rounded-2xl shadow-[0_0_20px_rgba(74,107,93,0.3)] hover:scale-105 transition-all font-medium tracking-wide flex items-center gap-3"
