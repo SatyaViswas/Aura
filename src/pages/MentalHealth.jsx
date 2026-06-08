@@ -36,6 +36,8 @@ const MentalHealth = () => {
   const handleSendMessageRef = useRef();
   const isVoiceModeActiveRef = useRef(isVoiceModeActive);
   const webAudioRef = useRef(new Audio());
+  const audioQueueRef = useRef([]);
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     isVoiceModeActiveRef.current = isVoiceModeActive;
@@ -92,16 +94,20 @@ const MentalHealth = () => {
         setMessages(entry.goals.mentalChat);
       }
     }
-  }, [selectedDate]);
+  }, [selectedDate, dailyGoals.mentalChat, history]);
 
   useEffect(() => {
     scrollToBottom();
     if (selectedDate === 'today') {
-      if (messages.length > 1 || messages[0].id !== 1) {
+      // Only dispatch save operations if the messages array actually contains new updates 
+      // compared to our current global state value
+      const isLocalDifferent = JSON.stringify(messages) !== JSON.stringify(dailyGoals.mentalChat);
+      
+      if (isLocalDifferent && (messages.length > 1 || messages[0]?.id !== 1)) {
         saveMentalChat(messages);
       }
     }
-  }, [messages, isTyping, saveMentalChat, selectedDate]);
+  }, [messages, isTyping, saveMentalChat, selectedDate, dailyGoals.mentalChat]);
 
   // Control playback based on breathingActive state
   useEffect(() => {
@@ -163,41 +169,66 @@ const MentalHealth = () => {
   };
 
   // ── Dual-Engine Audio Pipeline ───────────────────────────────────────────
-  const speakResponse = async (textToSpeak) => {
-    try {
-      // Clear any currently playing audio stream immediately
-      if (webAudioRef.current) {
-        webAudioRef.current.pause();
-        webAudioRef.current.src = "";
-      }
-      setAiSpeaking(true);
-      
-      const response = await fetch('http://localhost:8000/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToSpeak, gender: voiceGender })
-      });
-      
-      if (!response.ok) throw new Error("Failed to fetch server neural voice stream");
-      
-      const blob = await response.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      
-      webAudioRef.current.src = audioUrl;
-      
-      // When the audio finishes playing naturally, restart the mic listener loop automatically
-      webAudioRef.current.onended = () => {
-        setAiSpeaking(false);
-        if (isVoiceModeActiveRef.current && recognitionRef.current) {
-          try { recognitionRef.current.start(); } catch(e) {}
-        }
-      };
-      
-      await webAudioRef.current.play();
-    } catch (error) {
-      console.warn("Neural audio playback failure:", error);
+  const playNextInQueue = async () => {
+    if (audioQueueRef.current.length === 0) {
+      isPlayingRef.current = false;
       setAiSpeaking(false);
+      if (isVoiceModeActiveRef.current && recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch (e) { }
+      }
+      return;
     }
+    
+    isPlayingRef.current = true;
+    setAiSpeaking(true);
+    const nextAudioObj = audioQueueRef.current.shift();
+    
+    webAudioRef.current = nextAudioObj;
+    
+    nextAudioObj.onended = () => {
+      playNextInQueue();
+    };
+    
+    try {
+      await nextAudioObj.play();
+    } catch (e) {
+      console.warn("Neural audio streaming playback failure:", e);
+      playNextInQueue();
+    }
+  };
+
+  const enqueueAudio = (textToSpeak) => {
+    if (!textToSpeak || !textToSpeak.trim()) return;
+    let sanitizedText = textToSpeak.replace(/[*#_\[\]`]/g, '').replace(/\.\s/g, '... ');
+    if (sanitizedText.endsWith('.')) {
+      sanitizedText = sanitizedText.slice(0, -1) + '...';
+    }
+    const encodedText = encodeURIComponent(sanitizedText);
+    const streamUrl = `http://localhost:8000/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
+    
+    // Create and preload the audio object immediately to fetch the stream in the background
+    const audioObj = new Audio(streamUrl);
+    audioObj.preload = "auto";
+    audioObj.load();
+    
+    audioQueueRef.current.push(audioObj);
+    if (!isPlayingRef.current) {
+      playNextInQueue();
+    }
+  };
+
+  const speakResponse = (textToSpeak) => {
+    audioQueueRef.current.forEach(obj => {
+      obj.pause();
+      obj.src = "";
+    });
+    audioQueueRef.current = [];
+    if (webAudioRef.current) {
+      webAudioRef.current.pause();
+      webAudioRef.current.src = "";
+    }
+    isPlayingRef.current = false;
+    enqueueAudio(textToSpeak);
   };
 
   const toggleVoiceMode = () => {
@@ -215,11 +246,17 @@ const MentalHealth = () => {
 
         // 3. Cross-Browser Mic Interruption (Barge-In)
         recognitionRef.current.onsoundstart = () => {
-          if (webAudioRef.current && !webAudioRef.current.paused) {
+          if (webAudioRef.current && (!webAudioRef.current.paused || audioQueueRef.current.length > 0)) {
+            audioQueueRef.current.forEach(obj => {
+              obj.pause();
+              obj.src = "";
+            });
+            audioQueueRef.current = [];
             webAudioRef.current.pause();
             webAudioRef.current.src = "";
             setAiSpeaking(false);
             setMicListening(true);
+            isPlayingRef.current = false;
           }
         };
 
@@ -233,10 +270,16 @@ const MentalHealth = () => {
       speakResponse("Hello, I am here. How are your mind and body feeling?");
     } else {
       // 4. CLEANUP ON CLOSING VOICE OVERLAY
+      audioQueueRef.current.forEach(obj => {
+        obj.pause();
+        obj.src = "";
+      });
+      audioQueueRef.current = [];
       if (webAudioRef.current) {
         webAudioRef.current.pause();
         webAudioRef.current.src = "";
       }
+      isPlayingRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
       }
@@ -248,6 +291,11 @@ const MentalHealth = () => {
 
   useEffect(() => {
     return () => {
+      audioQueueRef.current.forEach(obj => {
+        obj.pause();
+        obj.src = "";
+      });
+      audioQueueRef.current = [];
       if (webAudioRef.current) {
         webAudioRef.current.pause();
         webAudioRef.current.src = "";
@@ -317,16 +365,59 @@ const MentalHealth = () => {
         }));
 
       const chatSession = model.startChat({ history: historyPayload });
-      const result = await chatSession.sendMessage(userText);
-      const responseText = result.response.text();
-
+      
+      const msgId = Date.now() + 1;
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, role: 'model', parts: [{ text: responseText }] }
+        { id: msgId, role: 'model', parts: [{ text: '' }] }
       ]);
-
+      
+      if (isVoiceModeActive) {
+        audioQueueRef.current.forEach(obj => {
+          obj.pause();
+          obj.src = "";
+        });
+        audioQueueRef.current = [];
+        if (webAudioRef.current) {
+          webAudioRef.current.pause();
+          webAudioRef.current.src = "";
+        }
+        isPlayingRef.current = false;
+      }
+      
+      const result = await chatSession.sendMessageStream(userText);
+      
+      let fullResponse = "";
+      let sentenceBuffer = "";
+      
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullResponse += chunkText;
+        sentenceBuffer += chunkText;
+        
+        setMessages((prev) => prev.map(msg => 
+          msg.id === msgId ? { ...msg, parts: [{ text: fullResponse }] } : msg
+        ));
+        
+        if (isVoiceModeActive) {
+          const sentenceRegex = /([^.!?]+[.!?]+)\s*/g;
+          let match;
+          let lastIndex = 0;
+          
+          while ((match = sentenceRegex.exec(sentenceBuffer)) !== null) {
+            const sentence = match[1].trim();
+            if (sentence) enqueueAudio(sentence);
+            lastIndex = sentenceRegex.lastIndex;
+          }
+          sentenceBuffer = sentenceBuffer.substring(lastIndex);
+        }
+      }
+      
+      if (isVoiceModeActive && sentenceBuffer.trim()) {
+        enqueueAudio(sentenceBuffer.trim());
+      }
+      
       setMentalComplete(true);
-      if (isVoiceModeActive) speakResponse(responseText);
 
     } catch (error) {
       console.warn("Nivi Generation Pipeline Exception:", error);
@@ -393,10 +484,10 @@ const MentalHealth = () => {
         <p className="text-text-secondary text-lg font-light">Reflect, breathe, and realign.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
         {/* Nivi AI Companion Interface */}
-        <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col h-[650px] relative">
-          <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
+        <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col min-h-[600px] lg:h-[650px] relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-border">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-alert flex items-center justify-center text-primary font-medium text-lg shadow-inner">
                 N
@@ -407,7 +498,7 @@ const MentalHealth = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
               {/* Clear Current Chat Action */}
               {selectedDate === 'today' && (
                 <button
@@ -527,7 +618,7 @@ const MentalHealth = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
+          <form onSubmit={handleSendMessage} className="flex flex-wrap sm:flex-nowrap gap-3 items-center w-full mt-auto pt-4">
             {selectedDate === 'today' && (
               <button
                 type="button"
@@ -544,7 +635,7 @@ const MentalHealth = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={isTyping || selectedDate !== 'today'}
-              className="flex-1 px-6 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm disabled:opacity-50 disabled:bg-background"
+              className="flex-1 min-w-[150px] px-6 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm disabled:opacity-50 disabled:bg-background"
             />
             <button
               type="submit"
@@ -557,7 +648,7 @@ const MentalHealth = () => {
         </section>
 
         {/* Dynamic Soundscape Controller & Breathwork Somatic Ring */}
-        <section className="bg-surface rounded-[1.5rem] p-8 md:p-12 shadow-natural flex flex-col justify-between h-[650px] relative overflow-hidden">
+        <section className="bg-surface rounded-[1.5rem] p-8 md:p-12 shadow-natural flex flex-col justify-between min-h-[600px] lg:h-[650px] relative overflow-hidden">
           <div className="z-10 relative">
             <h2 className="text-2xl font-light text-text-primary mb-2">Breathwork</h2>
             <p className="text-text-secondary text-[15px] font-light mb-8">Synchronize your breath to the expanding circle to trigger a parasympathetic response.</p>
@@ -567,12 +658,12 @@ const MentalHealth = () => {
               <label className="text-xs uppercase tracking-widest text-text-secondary font-medium flex items-center gap-1.5 mb-3">
                 <Music className="w-3.5 h-3.5" /> Ambient Soundscape
               </label>
-              <div className="flex flex-wrap gap-2 bg-background p-1.5 rounded-xl w-fit">
+              <div className="flex flex-wrap gap-2 bg-background p-1.5 rounded-xl w-full sm:w-fit">
                 {audioTracks.map((track) => (
                   <button
                     key={track.id}
                     onClick={() => setSelectedTrack(track.id)}
-                    className={`px-5 py-2.5 rounded-lg text-sm transition-all ${selectedTrack === track.id
+                    className={`px-3 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm rounded-lg transition-all ${selectedTrack === track.id
                       ? 'bg-surface text-primary shadow-sm font-medium'
                       : 'text-text-secondary hover:text-text-primary'
                       }`}

@@ -39,7 +39,19 @@ const Water = () => {
         <p className="text-text-secondary text-lg font-light">Nourish your body, drop by drop.</p>
       </header>
 
-      <section className="bg-surface rounded-[1.5rem] p-8 md:p-12 shadow-natural flex flex-col items-center gap-12">
+      <section className="p-5 sm:p-7 md:p-8 rounded-[1.5rem] bg-surface border border-border shadow-natural flex flex-col items-center gap-12">
+        {/* Progress View Metric Floats */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 w-full border-b border-border pb-6">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-text-secondary font-medium">Logged</span>
+            <div className="text-3xl font-light text-text-primary">{waterLogged} ml</div>
+          </div>
+          <div className="sm:text-right">
+            <span className="text-xs uppercase tracking-widest text-text-secondary font-medium">Daily Target</span>
+            <div className="text-3xl font-light text-primary">{waterTarget} ml</div>
+          </div>
+        </div>
+
         {/* Visual Ring Matrix */}
         <div className="relative flex items-center justify-center">
           <svg
@@ -81,12 +93,12 @@ const Water = () => {
 
         {/* Action Controls */}
         <div className="w-full max-w-md space-y-8">
-          <div className="grid grid-cols-3 gap-4">
-            {[250, 500, 750].map((amount) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
+            {[250, 500, 750, 1000].map((amount) => (
               <button
                 key={amount}
                 onClick={() => addWater(amount)}
-                className="py-4 px-2 bg-background border border-border rounded-xl hover:bg-alert hover:border-alert hover:text-primary transition-all text-text-primary font-medium flex items-center justify-center gap-1 shadow-sm"
+                className="px-3 py-3 text-xs sm:text-sm rounded-xl font-light w-full transition-all bg-background border border-border hover:bg-alert hover:border-alert hover:text-primary text-text-primary flex items-center justify-center gap-1 shadow-sm"
               >
                 <Plus className="w-4 h-4" /> {amount}
               </button>
