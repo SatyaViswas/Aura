@@ -593,19 +593,40 @@ const PoseAnalyzer = ({
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
 
       {/* ── Top chrome bar ─────────────────────────────────────────────────── */}
-      <header className="shrink-0 px-6 py-4 flex items-center justify-between bg-surface border-b border-border shadow-[0_2px_20px_-4px_rgba(42,42,42,0.04)] z-20">
-        <div className="flex flex-col">
+      <header className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-surface border-b border-border shadow-[0_2px_20px_-4px_rgba(42,42,42,0.04)] z-20 gap-3">
+        <div className="flex flex-col min-w-0">
           <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
             Live Session
           </p>
-          <h2 className="text-lg font-light text-text-primary leading-tight">
+          <h2 className="text-base sm:text-lg font-light text-text-primary leading-tight truncate">
             {exerciseName}
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          <WsStatusPill status={gradientStatus} />
+        <div className="flex items-center gap-2 shrink-0">
+          {/* WS status — hide label on mobile */}
+          <span
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full ${
+              gradientStatus === WS_STATUS.OPEN
+                ? 'bg-[#DCE4E0] text-[#4A6B5D]'
+                : gradientStatus === WS_STATUS.ERROR
+                  ? 'bg-red-50 text-red-500 border border-red-100'
+                  : 'bg-background text-text-secondary border border-border'
+            }`}
+          >
+            {gradientStatus === WS_STATUS.OPEN ? (
+              <Wifi className="w-3 h-3" />
+            ) : gradientStatus === WS_STATUS.ERROR ? (
+              <AlertCircle className="w-3 h-3" />
+            ) : (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            )}
+            <span className="hidden sm:inline">
+              {gradientStatus === WS_STATUS.OPEN ? 'Stream Live' : gradientStatus === WS_STATUS.ERROR ? 'WS Error' : gradientStatus === WS_STATUS.CONNECTING ? 'Connecting…' : 'Disconnected'}
+            </span>
+          </span>
 
+          {/* Voice toggle — icon-only on mobile */}
           <button
             onClick={() => {
               if (isVoiceEnabled) window.speechSynthesis.cancel();
@@ -615,22 +636,25 @@ const PoseAnalyzer = ({
                 return nextState;
               });
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm border ${
+            title={isVoiceEnabled ? 'Disable voice' : 'Enable voice'}
+            className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium transition-all shadow-sm border ${
               isVoiceEnabled
                 ? 'bg-[#DCE4E0] text-[#4A6B5D] border-[#4A6B5D]/20'
                 : 'bg-background text-text-secondary border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20'
             }`}
           >
             {isVoiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            {isVoiceEnabled ? 'Voice On' : 'Voice Off'}
+            <span className="hidden sm:inline">{isVoiceEnabled ? 'Voice On' : 'Voice Off'}</span>
           </button>
 
+          {/* End session — icon-only on mobile */}
           <button
             onClick={handleEndSession}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-text-secondary bg-background border border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20 transition-all shadow-sm"
+            title="End Session"
+            className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium text-text-secondary bg-background border border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20 transition-all shadow-sm"
           >
             <X className="w-4 h-4" />
-            End Session
+            <span className="hidden sm:inline">End Session</span>
           </button>
         </div>
       </header>
@@ -665,10 +689,10 @@ const PoseAnalyzer = ({
       </AnimatePresence>
 
       {/* ── Main layout ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 sm:gap-4 p-3 sm:p-4 overflow-y-auto lg:overflow-hidden min-h-0">
 
         {/* ── Camera viewfinder column ───────────────────────────────────────── */}
-        <div className="relative flex-1 min-h-0 flex flex-col">
+        <div className="relative flex-1 flex flex-col" style={{ minHeight: 'min(55vw, 320px)' }}>
 
           {/* Feedback pill */}
           <AnimatePresence mode="wait">
@@ -680,9 +704,9 @@ const PoseAnalyzer = ({
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-max max-w-[90%]"
             >
-              <div className="bg-[#DCE4E0]/90 backdrop-blur-md px-6 py-3 rounded-full shadow-[0_8px_30px_-8px_rgba(74,107,93,0.2)] flex items-center gap-3">
-                <Activity className="w-4 h-4 text-[#4A6B5D] shrink-0 animate-pulse" />
-                <span className="text-sm font-medium text-text-primary text-center">
+              <div className="bg-[#DCE4E0]/90 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-[0_8px_30px_-8px_rgba(74,107,93,0.2)] flex items-center gap-2 sm:gap-3">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4A6B5D] shrink-0 animate-pulse" />
+                <span className="text-xs sm:text-sm font-medium text-text-primary text-center">
                   {feedback}
                 </span>
               </div>
@@ -690,7 +714,7 @@ const PoseAnalyzer = ({
           </AnimatePresence>
 
           {/* Camera feed container */}
-          <div className="relative w-full h-full rounded-[1.5rem] overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] border border-border">
+          <div className="relative w-full h-full rounded-[1.25rem] sm:rounded-[1.5rem] overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] border border-border">
             <video
               ref={videoRef}
               autoPlay
@@ -792,10 +816,10 @@ const PoseAnalyzer = ({
         </div>
 
         {/* ── Right metrics panel ────────────────────────────────────────────── */}
-        <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-4 overflow-y-auto lg:overflow-hidden">
+        <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-3 sm:gap-4">
 
           {/* ── Rep counter card ─────────────────────────────────────── */}
-          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col items-center gap-3">
+          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col items-center gap-3">
             <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
               Repetitions
             </p>
@@ -805,7 +829,7 @@ const PoseAnalyzer = ({
               initial={{ scale: 1.15, opacity: 0.6 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="text-[5rem] font-extralight tabular-nums text-text-primary leading-none"
+              className="text-[4rem] sm:text-[5rem] font-extralight tabular-nums text-text-primary leading-none"
             >
               {reps}
             </motion.div>
@@ -838,7 +862,7 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── Stage & angle card ───────────────────────────────────── */}
-          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex items-center justify-between gap-4">
+          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex items-center justify-between gap-4">
             <div className="flex flex-col items-start gap-1.5">
               <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
                 Phase
@@ -861,7 +885,7 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── XP & exercise info card ─────────────────────────────── */}
-          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-5">
+          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-text-secondary">
                 <TrendingUp className="w-4 h-4" />
@@ -921,7 +945,7 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── WebSocket diagnostic card ─────────────────────────────── */}
-          <div className="bg-surface rounded-[1.5rem] p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-4">
+          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-4">
             <div className="flex items-center gap-2 text-text-secondary">
               <Wifi className="w-4 h-4" />
               <span className="text-xs uppercase tracking-widest font-medium">Stream Target</span>
@@ -945,7 +969,7 @@ const PoseAnalyzer = ({
           {/* ── End session CTA ─────────────────────────────────────────── */}
           <button
             onClick={handleEndSession}
-            className="w-full py-4 rounded-[1rem] bg-[#4A6B5D] text-white font-medium tracking-wide text-sm hover:bg-[#3d5a4d] hover:scale-[1.02] active:scale-[0.99] transition-all shadow-[0_8px_24px_-6px_rgba(74,107,93,0.40)] flex items-center justify-center gap-2.5"
+            className="w-full py-4 rounded-[1rem] bg-[#4A6B5D] text-white font-medium tracking-wide text-sm hover:bg-[#3d5a4d] hover:scale-[1.02] active:scale-[0.99] transition-all shadow-[0_8px_24px_-6px_rgba(74,107,93,0.40)] flex items-center justify-center gap-2.5 mb-2"
           >
             <CheckCircle2 className="w-4 h-4" />
             Complete &amp; Log Session

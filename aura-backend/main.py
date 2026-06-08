@@ -1,3 +1,6 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+import edge_tts
 import json
 import logging
 import uuid
@@ -445,3 +448,34 @@ async def get_coordinate_format(exercise: str):
     }
     
     return formats.get(exercise, {"error": f"Exercise '{exercise}' not found"})
+
+VOICE_MAPPING = {
+    "female": "en-US-EmmaNeural",
+    "male": "en-US-BrianNeural"
+}
+
+@app.get("/api/tts")
+async def text_to_speech(text: str = "", gender: str = "female"):
+    if not text:
+        raise HTTPException(status_code=400, detail="Text parameter is missing")
+        
+    voice = VOICE_MAPPING.get(gender, "en-US-EmmaNeural")
+    try:
+        communicate = edge_tts.Communicate(text, voice, rate="-5%")
+        
+        async def audio_generator():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    yield chunk["data"]
+
+        return StreamingResponse(
+            audio_generator(), 
+            media_type="audio/mpeg",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Connection": "keep-alive",
+                "X-Content-Type-Options": "nosniff"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

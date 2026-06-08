@@ -12,7 +12,7 @@
  * pose_analyzer === false → in-layout countdown timer widget
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -468,13 +468,53 @@ const ModalityDiscovery = ({ onSelectModality }) => {
     ...MODALITY_META[key],
   }));
 
-  // Fetch metrics directly to update the dashboard panels cleanly
-  const dailyXpEarned = useHealthStore((state) => state.dailyGoals?.dailyXpEarned ?? 0);
-  const highestDailyXp = useHealthStore((state) => state.user?.highestDailyXp ?? 0);
+  const completedExerciseIds = useHealthStore((state) => state.dailyGoals?.completedExerciseIds || []);
+  const highestTrainingXpFromStore = useHealthStore((state) => state.user?.highestTrainingXp ?? 0);
+
+  // Pre-calculate training-specific today's XP from completed exercises list
+  const exerciseXpMap = useMemo(() => {
+    const map = {};
+    Object.values(workoutData).forEach(modality => {
+      modality.tracks.forEach(track => {
+        track.subSections.forEach(sub => {
+          sub.exercises.forEach(ex => {
+            map[ex.id] = ex.estimated_xp || 0;
+          });
+        });
+      });
+    });
+    return map;
+  }, []);
+
+  const trainingXpEarned = useMemo(() => {
+    return completedExerciseIds.reduce((sum, id) => sum + (exerciseXpMap[id] || 0), 0);
+  }, [completedExerciseIds, exerciseXpMap]);
+
+  const highestTrainingXp = Math.max(highestTrainingXpFromStore, trainingXpEarned);
 
   return (
     <motion.div key="level-1" variants={pageVariants} initial="initial" animate="animate" exit="exit" className="space-y-10">
       <SectionHeader title="Training Library" subtitle="Select a discipline to explore your structured programs." />
+
+      {/* Visually Prominent Training-Specific XP Tracker Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-[1.5rem] bg-gradient-to-r from-[#4A6B5D] to-[#3d5a4d] dark:from-[#354f44] dark:to-[#2e3e35] text-white shadow-[0_10px_30px_rgba(74,107,93,0.15)] border border-[#4A6B5D]/20">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-[1rem] bg-white/10 flex items-center justify-center backdrop-blur-sm">
+            <Trophy className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium tracking-tight text-white/90">Training Performance</h3>
+            <p className="text-xs text-white/70 font-light mt-0.5">Discipline-specific effort & training XP tracker</p>
+          </div>
+        </div>
+
+        <div className="flex items-baseline gap-1.5 bg-white/10 px-6 py-3 rounded-xl backdrop-blur-sm">
+          <span className="text-3xl font-light tabular-nums">{trainingXpEarned}</span>
+          <span className="text-sm text-white/40 font-light">/</span>
+          <span className="text-xl font-normal text-white/90">{highestTrainingXp}</span>
+          <span className="text-xs text-white/90 font-medium ml-1">XP Today</span>
+        </div>
+      </div>
 
       <motion.div variants={cardStagger} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {modalities.map(({ key, title, icon: Icon, tagline, badge, bgDecor, tracks }) => (
@@ -507,7 +547,7 @@ const ModalityDiscovery = ({ onSelectModality }) => {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Programs', value: '13', icon: BookOpen },
           { label: 'Exercise Nodes', value: '196', icon: TrendingUp },
@@ -519,20 +559,6 @@ const ModalityDiscovery = ({ onSelectModality }) => {
             <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">{label}</span>
           </div>
         ))}
-
-        {/* Dynamic Card: Today's XP vs Lifetime Peak */}
-        <div className="bg-surface rounded-[1rem] p-5 shadow-[0_4px_20px_-4px_rgba(42,42,42,0.05)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.25)] flex flex-col items-center justify-center gap-1 border border-border">
-          <Trophy className="w-4 h-4 text-[#4A6B5D] mb-1" />
-          <span className="text-2xl font-light text-text-primary tabular-nums">
-            {dailyXpEarned}
-            <span className="text-xs text-text-secondary/40 px-1 font-light">/</span>
-            <span className="text-base font-normal text-[#4A6B5D]">{highestDailyXp}</span>
-            <span className="text-[10px] text-[#4A6B5D] font-medium ml-0.5">XP</span>
-          </span>
-          <span className="text-[10px] text-text-secondary uppercase tracking-wider text-center">
-            Today vs Best Ever
-          </span>
-        </div>
       </div>
     </motion.div>
   );
@@ -645,7 +671,14 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
   const logExerciseCompletion = useHealthStore((state) => state.logExerciseCompletion);
   const resetExerciseCompletion = useHealthStore((state) => state.resetExerciseCompletion);
 
-  const handleBeginSession = (exercise) => setSessionExercise(exercise);
+  const handleBeginSession = (exercise) => {
+    setSessionExercise(exercise);
+    // For CV-tracked exercises, PoseAnalyzer is a full-screen fixed overlay—
+    // close the bottom sheet immediately so it doesn't glitch beneath the overlay.
+    if (exercise.pose_analyzer) {
+      setSelectedExercise(null);
+    }
+  };
 
   const handlePoseSessionComplete = (exercise) => {
     logExerciseCompletion(exercise.id, exercise.estimated_xp);
@@ -670,14 +703,14 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
         {sessionExercise && sessionExercise.pose_analyzer && (
           <PoseAnalyzer
             key={sessionExercise.id} exerciseId={sessionExercise.id} exerciseName={sessionExercise.name}
-            targetReps={sessionExercise.target_reps !== null ? Number(String(sessionExercise.target_reps).split('-')[0]) : null}
+            targetReps={sessionExercise.target_reps !== null ? Number(String(sessionExercise.target_reps).split("-")[0]) : null}
             estimatedXp={sessionExercise.estimated_xp} onComplete={() => handlePoseSessionComplete(sessionExercise)}
           />
         )}
       </AnimatePresence>
 
       <BackButton onClick={onBack} label="Back to Sessions" />
-      <SectionHeader title={subSection.title} subtitle={SUBSECTION_DESC[subSection.id] || 'Complete each exercise in sequence.'} />
+      <SectionHeader title={subSection.title} subtitle={SUBSECTION_DESC[subSection.id] || "Complete each exercise in sequence."} />
 
       <AnimatePresence>
         {allDone && (
@@ -690,7 +723,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
               <p className="text-sm text-[#4A6B5D] font-medium">Session complete. Every exercise finished.</p>
             </div>
             <button onClick={completeWorkoutAction} className="text-xs font-semibold text-white bg-[#4A6B5D] px-4 py-2 rounded-full hover:bg-[#3d5a4d] transition-colors shrink-0">
-              Log & Finish
+              Log &amp; Finish
             </button>
           </motion.div>
         )}
@@ -715,7 +748,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium ${isDone ? 'bg-[#4A6B5D]' : 'bg-background'}`}>
-                      {isDone ? <CheckCircle2 className="w-4 h-4 text-white" /> : String(idx + 1).padStart(2, '0')}
+                      {isDone ? <CheckCircle2 className="w-4 h-4 text-white" /> : String(idx + 1).padStart(2, "0")}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -742,19 +775,12 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
                     </div>
                   </div>
                 </button>
-
-                <AnimatePresence>
-                  {isSelected && !exercise.pose_analyzer && sessionExercise?.id === exercise.id && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-3 lg:hidden overflow-hidden">
-                      <CountdownTimer exercise={exercise} onComplete={() => handleTimerComplete(exercise)} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             );
           })}
         </div>
 
+        {/* Desktop Side Panel (lg+) */}
         <div className="hidden lg:block sticky top-6 space-y-4">
           <AnimatePresence mode="wait">
             {selectedExercise ? (
@@ -796,6 +822,128 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
           </div>
         </div>
       </div>
+
+      {/* Mobile XP Summary Bar */}
+      <div className="lg:hidden mt-6 bg-surface rounded-[1rem] p-4 border border-border flex items-center justify-between shadow-[0_4px_20px_-4px_rgba(42,42,42,0.04)]">
+        <div>
+          <p className="text-[10px] text-text-secondary uppercase tracking-widest">Session XP</p>
+          <p className="text-xl font-light text-text-primary mt-0.5">
+            {subSection.exercises.reduce((sum, ex) => sum + ex.estimated_xp, 0)}
+            <span className="text-sm text-[#4A6B5D] ml-1">XP</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-text-secondary uppercase tracking-widest">Completed</p>
+          <p className="text-xl font-light text-[#4A6B5D] mt-0.5">
+            {completedExerciseIds.length}
+            <span className="text-sm text-text-secondary ml-1">/ {subSection.exercises.length}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Mobile Exercise Bottom Sheet */}
+      <AnimatePresence>
+        {selectedExercise && (
+          <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-[#2A2A2A]/30 dark:bg-black/50 backdrop-blur-[3px]"
+              onClick={() => { setSelectedExercise(null); setSessionExercise(null); }}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", bounce: 0.08, duration: 0.45 }}
+              className="relative w-full bg-surface rounded-t-[1.75rem] shadow-[0_-20px_60px_-10px_rgba(42,42,42,0.18)] dark:shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.5)] flex flex-col max-h-[92vh]"
+            >
+              <div className="w-10 h-1 bg-[#DCE4E0] dark:bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+              <div className="overflow-y-auto px-5 sm:px-6 pb-safe-or-8 pt-3 flex flex-col gap-5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px) + 16px, 32px)' }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">Exercise Detail</p>
+                    <h3 className="text-xl font-light text-text-primary leading-snug">{selectedExercise.name}</h3>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedExercise(null); setSessionExercise(null); }}
+                    className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-text-secondary border border-border shrink-0 mt-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-background rounded-[0.875rem] p-3 flex flex-col gap-1 border border-border">
+                    <div className="flex items-center gap-1 text-text-secondary">
+                      <TrendingUp className="w-3 h-3" />
+                      <span className="text-[10px] uppercase tracking-wider font-medium">Reps</span>
+                    </div>
+                    <span className="text-base font-light text-text-primary">{selectedExercise.target_reps ?? ""}</span>
+                  </div>
+                  <div className="bg-background rounded-[0.875rem] p-3 flex flex-col gap-1 border border-border">
+                    <div className="flex items-center gap-1 text-text-secondary">
+                      <Timer className="w-3 h-3" />
+                      <span className="text-[10px] uppercase tracking-wider font-medium">Duration</span>
+                    </div>
+                    <span className="text-base font-light text-text-primary">{selectedExercise.target_duration ?? ""}</span>
+                  </div>
+                  <div className="bg-background rounded-[0.875rem] p-3 flex flex-col gap-1 border border-border">
+                    <div className="flex items-center gap-1 text-text-secondary">
+                      <Star className="w-3 h-3" />
+                      <span className="text-[10px] uppercase tracking-wider font-medium">XP</span>
+                    </div>
+                    <span className="text-base font-light text-[#4A6B5D] font-medium">+{selectedExercise.estimated_xp}</span>
+                  </div>
+                </div>
+
+                <div className={`inline-flex items-center gap-1.5 self-start px-3 py-1.5 rounded-full text-xs font-medium ${selectedExercise.pose_analyzer ? 'bg-[#DCE4E0] text-[#4A6B5D]' : 'bg-background text-text-secondary border border-border'}`}>
+                  {selectedExercise.pose_analyzer
+                    ? <><Camera className="w-3 h-3" /> CV Tracking Enabled</>
+                    : <><Clock className="w-3 h-3" /> Manual Timer Mode</>}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-text-secondary">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span className="text-xs uppercase tracking-widest font-medium">Form Cues</span>
+                  </div>
+                  <ol className="space-y-3">
+                    {selectedExercise.instructions.map((step, idx) => (
+                      <li key={idx} className="flex gap-3">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-[#DCE4E0] text-[#4A6B5D] text-[10px] font-bold flex items-center justify-center mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-text-secondary font-light leading-relaxed">{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <AnimatePresence>
+                  {sessionExercise?.id === selectedExercise.id && !selectedExercise.pose_analyzer && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
+                      <CountdownTimer exercise={selectedExercise} onComplete={() => handleTimerComplete(selectedExercise)} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {(!sessionExercise || sessionExercise.id !== selectedExercise.id) && (
+                  <button
+                    onClick={() => handleBeginSession(selectedExercise)}
+                    className="w-full py-4 bg-[#4A6B5D] text-white rounded-[1rem] font-medium tracking-wide text-sm hover:bg-[#3d5a4d] active:scale-[0.99] transition-all shadow-[0_8px_24px_-6px_rgba(74,107,93,0.40)] flex items-center justify-center gap-2.5"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Begin Tracking Session
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -832,12 +980,12 @@ const Workout = () => {
 
   const handleCompleteWorkout = useCallback(() => {
     completeWorkout();
-    navigate('/dashboard');
+    navigate("/dashboard");
   }, [completeWorkout, navigate]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14">
+      <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14 pb-10">
         <AnimatePresence mode="wait">
           {level === 1 && <ModalityDiscovery key="l1" onSelectModality={handleSelectModality} />}
           {level === 2 && selectedModalityKey && <TrackList key="l2" modalityKey={selectedModalityKey} onBack={handleBack} onSelectTrack={handleSelectTrack} />}
