@@ -5,9 +5,11 @@ import json
 import logging
 import uuid
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import google.generativeai as genAI
 from exercises import (
     # Upper body
     BicepCurlCoordinates,
@@ -70,10 +72,31 @@ from exercises import (
     TricepRopePulldownCoordinates,
     TricepRopePushdownCoordinates,
 )
+import os
 from utils.redis_client import redis_client
 from config import config
 
 logging.basicConfig(level=logging.INFO)
+
+# Configure Google Generative AI
+api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("VITE_GEMINI_API_KEY")
+if not api_key:
+    # Try loading from the frontend's .env file in the parent directory
+    parent_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    if os.path.exists(parent_env_path):
+        try:
+            from dotenv import dotenv_values
+            parent_env = dotenv_values(parent_env_path)
+            api_key = parent_env.get("VITE_GEMINI_API_KEY") or parent_env.get("GOOGLE_API_KEY") or parent_env.get("GEMINI_API_KEY")
+        except Exception as e:
+            logging.error(f"Error reading parent .env: {e}")
+
+if api_key:
+    genAI.configure(api_key=api_key)
+    logging.info("✨ Google Generative AI configured successfully.")
+else:
+    logging.warning("⚠️ GOOGLE_API_KEY could not be found in the backend environment setup!")
+
 
 app = FastAPI()
 
@@ -479,3 +502,28 @@ async def text_to_speech(text: str = "", gender: str = "female"):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class NutritionRequest(BaseModel):
+    food_description: str
+    meal_type: Optional[str] = None
+
+@app.post("/api/nutrition/parse")
+async def parse_nutrition(request: NutritionRequest):
+    try:
+        model = genAI.GenerativeModel(
+            model_name="gemini-2.5-flash-lite",
+            system_instruction='You are a precise nutrition estimator. Output strictly minified JSON only with these exact string keys: "calories" (int), "protein" (int), "carbs" (int), "fat" (int), "display_name" (string). Do not include markdown code block wrappers (like ```json), do not append explanations, and do not include white spaces outside the keys.',
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        prompt = f"Food description: {request.food_description}"
+        if request.meal_type:
+            prompt += f"\nMeal type: {request.meal_type}"
+            
+        response = await model.generate_content_async(prompt)
+        
+        return json.loads(response.text)
+    except Exception as e:
+        logging.error(f"Error parsing nutrition: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to estimate nutrition from description.")

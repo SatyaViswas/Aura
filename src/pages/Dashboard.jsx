@@ -37,6 +37,7 @@ const Dashboard = () => {
   // ──────────────────────────────────────────────────────────────────────────────
   const past35Days = useMemo(() => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
 
     // Initialize consistency cycle if not present
@@ -44,14 +45,19 @@ const Dashboard = () => {
       localStorage.setItem('consistencyCycleStartDate', todayStr);
     }
 
-    const cycleStartDateStr = localStorage.getItem('consistencyCycleStartDate');
-    const cycleStartDate = new Date(cycleStartDateStr);
-    const daysSinceCycleStart = Math.floor((today - cycleStartDate) / (1000 * 60 * 60 * 24));
+    let cycleStartDateStr = localStorage.getItem('consistencyCycleStartDate');
+    let cycleStartDate = new Date(cycleStartDateStr);
+    cycleStartDate.setHours(0, 0, 0, 0);
 
-    // Reset cycle if > 35 days have elapsed
-    if (daysSinceCycleStart > 35) {
+    let daysSinceCycleStart = Math.floor((today - cycleStartDate) / (1000 * 60 * 60 * 24));
+
+    // Reset cycle if 35 or more days have elapsed
+    if (daysSinceCycleStart >= 35 || daysSinceCycleStart < 0) {
       localStorage.setItem('consistencyCycleStartDate', todayStr);
-      localStorage.removeItem('consistencyGridData'); // Clear old grid data if stored
+      cycleStartDateStr = todayStr;
+      cycleStartDate = new Date(todayStr);
+      cycleStartDate.setHours(0, 0, 0, 0);
+      daysSinceCycleStart = 0;
     }
 
     // Build history map from the history array
@@ -60,11 +66,11 @@ const Dashboard = () => {
       return acc;
     }, {});
 
-    // Build 35-day array: chronologically from oldest (Day -34) to newest (Day 0 = today)
+    // Build 35-day array: starting with Day 1 (cycleStartDate) at index 0 up to Day 35 at index 34
     const days = [];
-    for (let i = 34; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+    for (let i = 0; i < 35; i++) {
+      const d = new Date(cycleStartDate);
+      d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
       let status = 'none';
 
@@ -87,8 +93,8 @@ const Dashboard = () => {
         } else if (someProgress) {
           status = 'partial';
         }
-      } else {
-        // Evaluate historical archived data for past days
+      } else if (dateStr < todayStr) {
+        // Evaluate historical archived data for past days in this cycle
         const entry = historyMap[dateStr];
         if (entry) {
           const g = entry.goals;
@@ -107,6 +113,9 @@ const Dashboard = () => {
             status = 'partial';
           }
         }
+      } else {
+        // Future days in the cycle are marked 'none'
+        status = 'none';
       }
 
       days.push({ date: dateStr, status });
@@ -256,8 +265,8 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex-1 flex items-center justify-center">
-            <div className="grid grid-cols-7 gap-3">
+          <div className="flex-1 flex flex-row items-center justify-center">
+            <div className="grid grid-cols-7 grid-flow-row gap-3">
               {past35Days.map((day, idx) => (
                 <div
                   key={idx}

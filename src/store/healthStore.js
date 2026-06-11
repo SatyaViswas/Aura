@@ -453,7 +453,16 @@ const useHealthStore = create(
       },
 
       completeWorkout: () => {
-        set((state) => applyActivity(state, { workoutsCompleted: true }));
+        const { dailyGoals, user } = get();
+        const currentHighestTrainingXp = Number(user.highestTrainingXp) || 0;
+        const currentTrainingXp = Number(dailyGoals.trainingXpEarned) || 0;
+        const newHighestTrainingXp = currentTrainingXp > currentHighestTrainingXp ? currentTrainingXp : currentHighestTrainingXp;
+
+        const userUpdates = {
+          highestTrainingXp: newHighestTrainingXp
+        };
+
+        set((state) => applyActivity(state, { workoutsCompleted: true }, userUpdates));
         syncToCloud(get());
       },
 

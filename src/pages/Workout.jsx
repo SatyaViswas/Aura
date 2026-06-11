@@ -303,7 +303,7 @@ const CountdownTimer = ({ exercise, onComplete }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PoseAnalyzerOverlay = ({ exercise, onClose }) => {
-  const wsUrl = `ws://localhost:8000/ws/${exercise.id}`;
+  const wsUrl = `ws://http://localhost:8000/ws/${exercise.id}`;
   const [dots, setDots] = useState('');
 
   useEffect(() => {
@@ -508,11 +508,22 @@ const ModalityDiscovery = ({ onSelectModality }) => {
           </div>
         </div>
 
-        <div className="flex items-baseline gap-1.5 bg-white/10 px-6 py-3 rounded-xl backdrop-blur-sm">
-          <span className="text-3xl font-light tabular-nums">{trainingXpEarned}</span>
-          <span className="text-sm text-white/40 font-light">/</span>
-          <span className="text-xl font-normal text-white/90">{highestTrainingXp}</span>
-          <span className="text-xs text-white/90 font-medium ml-1">XP Today</span>
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          {/* Today's Training XP (Left Side) */}
+          <div className="flex flex-col items-center sm:items-end bg-white/10 hover:bg-white/15 transition-all duration-300 px-5 py-3 rounded-xl backdrop-blur-sm min-w-[120px] border border-white/5 shadow-sm">
+            <span className="text-[10px] text-white/70 font-light uppercase tracking-wider flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5 text-white/80" /> Today's XP
+            </span>
+            <span className="text-2xl font-light tabular-nums mt-0.5 text-white">{trainingXpEarned}</span>
+          </div>
+
+          {/* Best Ever Training XP (Right Side) */}
+          <div className="flex flex-col items-center sm:items-end bg-white/10 hover:bg-white/15 transition-all duration-300 px-5 py-3 rounded-xl backdrop-blur-sm min-w-[120px] border border-white/5 shadow-sm">
+            <span className="text-[10px] text-white/70 font-light uppercase tracking-wider flex items-center gap-1">
+              <Trophy className="w-3.5 h-3.5 text-white/80" /> Best Ever
+            </span>
+            <span className="text-2xl font-light tabular-nums mt-0.5 text-white/90">{highestTrainingXp}</span>
+          </div>
         </div>
       </div>
 
