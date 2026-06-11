@@ -26,6 +26,28 @@ const MentalHealth = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Keep track of latest messages in a ref for safe use in non-dependent sync effect
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  // Compute displayed messages: only display today's live messages if date is 'today',
+  // otherwise fetch historical archived logs from the history store.
+  const displayedMessages = useMemo(() => {
+    if (selectedDate === 'today') {
+      return messages;
+    }
+    const entry = history.find((e) => e.date === selectedDate);
+    return entry?.goals?.mentalChat || [
+      {
+        id: 1,
+        role: 'model',
+        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+      }
+    ];
+  }, [selectedDate, messages, history]);
+
   // Voice Mode State
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [voiceGender, setVoiceGender] = useState('female');
@@ -76,9 +98,10 @@ const MentalHealth = () => {
   };
 
 
-  // Load chat logs when date changes
+  // Sync today's chat from store to local state when store changes externally (e.g. daily reset or hydration)
   useEffect(() => {
-    if (selectedDate === 'today') {
+    const isLocalDifferent = JSON.stringify(messagesRef.current) !== JSON.stringify(dailyGoals.mentalChat);
+    if (isLocalDifferent) {
       setMessages(
         (dailyGoals.mentalChat && dailyGoals.mentalChat.length > 0) ? dailyGoals.mentalChat : [
           {
@@ -88,26 +111,24 @@ const MentalHealth = () => {
           }
         ]
       );
-    } else {
-      const entry = history.find((e) => e.date === selectedDate);
-      if (entry && entry.goals?.mentalChat) {
-        setMessages(entry.goals.mentalChat);
-      }
     }
-  }, [selectedDate, dailyGoals.mentalChat, history]);
+  }, [dailyGoals.mentalChat]);
 
+  // Save today's chat changes back to the store
+  useEffect(() => {
+    // Only dispatch save operations if the messages array actually contains new updates 
+    // compared to our current global state value
+    const isLocalDifferent = JSON.stringify(messages) !== JSON.stringify(dailyGoals.mentalChat);
+
+    if (isLocalDifferent && (messages.length > 1 || messages[0]?.id !== 1)) {
+      saveMentalChat(messages);
+    }
+  }, [messages, saveMentalChat, dailyGoals.mentalChat]);
+
+  // Scroll to bottom when displayed messages change
   useEffect(() => {
     scrollToBottom();
-    if (selectedDate === 'today') {
-      // Only dispatch save operations if the messages array actually contains new updates 
-      // compared to our current global state value
-      const isLocalDifferent = JSON.stringify(messages) !== JSON.stringify(dailyGoals.mentalChat);
-      
-      if (isLocalDifferent && (messages.length > 1 || messages[0]?.id !== 1)) {
-        saveMentalChat(messages);
-      }
-    }
-  }, [messages, isTyping, saveMentalChat, selectedDate, dailyGoals.mentalChat]);
+  }, [displayedMessages, isTyping]);
 
   // Control playback based on breathingActive state
   useEffect(() => {
@@ -178,17 +199,17 @@ const MentalHealth = () => {
       }
       return;
     }
-    
+
     isPlayingRef.current = true;
     setAiSpeaking(true);
     const nextAudioObj = audioQueueRef.current.shift();
-    
+
     webAudioRef.current = nextAudioObj;
-    
+
     nextAudioObj.onended = () => {
       playNextInQueue();
     };
-    
+
     try {
       await nextAudioObj.play();
     } catch (e) {
@@ -204,13 +225,14 @@ const MentalHealth = () => {
       sanitizedText = sanitizedText.slice(0, -1) + '...';
     }
     const encodedText = encodeURIComponent(sanitizedText);
-    const streamUrl = `http://localhost:8000/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
-    
+    const backendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+    const streamUrl = `${backendBase}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
+
     // Create and preload the audio object immediately to fetch the stream in the background
     const audioObj = new Audio(streamUrl);
     audioObj.preload = "auto";
     audioObj.load();
-    
+
     audioQueueRef.current.push(audioObj);
     if (!isPlayingRef.current) {
       playNextInQueue();
@@ -365,13 +387,13 @@ const MentalHealth = () => {
         }));
 
       const chatSession = model.startChat({ history: historyPayload });
-      
+
       const msgId = Date.now() + 1;
       setMessages((prev) => [
         ...prev,
         { id: msgId, role: 'model', parts: [{ text: '' }] }
       ]);
-      
+
       if (isVoiceModeActive) {
         audioQueueRef.current.forEach(obj => {
           obj.pause();
@@ -384,26 +406,26 @@ const MentalHealth = () => {
         }
         isPlayingRef.current = false;
       }
-      
+
       const result = await chatSession.sendMessageStream(userText);
-      
+
       let fullResponse = "";
       let sentenceBuffer = "";
-      
+
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
         fullResponse += chunkText;
         sentenceBuffer += chunkText;
-        
-        setMessages((prev) => prev.map(msg => 
+
+        setMessages((prev) => prev.map(msg =>
           msg.id === msgId ? { ...msg, parts: [{ text: fullResponse }] } : msg
         ));
-        
+
         if (isVoiceModeActive) {
           const sentenceRegex = /([^.!?]+[.!?]+)\s*/g;
           let match;
           let lastIndex = 0;
-          
+
           while ((match = sentenceRegex.exec(sentenceBuffer)) !== null) {
             const sentence = match[1].trim();
             if (sentence) enqueueAudio(sentence);
@@ -412,11 +434,11 @@ const MentalHealth = () => {
           sentenceBuffer = sentenceBuffer.substring(lastIndex);
         }
       }
-      
+
       if (isVoiceModeActive && sentenceBuffer.trim()) {
         enqueueAudio(sentenceBuffer.trim());
       }
-      
+
       setMentalComplete(true);
 
     } catch (error) {
@@ -582,7 +604,7 @@ const MentalHealth = () => {
 
           <div className="flex-1 overflow-y-auto space-y-5 pr-2 no-scrollbar mb-6">
             <AnimatePresence>
-              {messages.map((msg) => (
+              {displayedMessages.map((msg) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}

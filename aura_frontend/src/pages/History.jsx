@@ -881,7 +881,7 @@ const History = () => {
 
       map[todayIso] = {
         date: todayIso,
-        goals: dailyGoals,
+        goals: { ...dailyGoals },
         streakKept,
       };
     }

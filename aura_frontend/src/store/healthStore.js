@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { auth, db, isFirebaseConnected } from '../config/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { workoutData } from '../config/workoutData';
+
+let cloudSnapshotUnsubscribe = null;
 
 const exerciseXpMap = {};
 if (workoutData) {
@@ -41,15 +43,14 @@ const initialDailyGoals = {
   trainingXpEarned: 0,
   leveledUpToday: false,
   streakIncrementedToday: false,
-  // XP milestone trackers — reset each day
-  waterHalfXpAwarded: false,   // 10 XP for reaching 50% water target
-  waterFullXpAwarded: false,   // 15 XP for reaching 100% water target
-  mealLogCount: 0,             // Meals logged today (XP capped at 3 logs)
-  dietFullXpAwarded: false,    // 20 XP for hitting calorie target
-  focusSessionsXpCount: 0,     // Pomodoros rewarded today (cap 3)
-  mentalXpAwarded: false,      // 20 XP for completing mental health once/day
-  meals: [],                   // Array of meals logged today
-  mentalChat: []               // Array of Nivi chat messages for today
+  waterHalfXpAwarded: false,
+  waterFullXpAwarded: false,
+  mealLogCount: 0,
+  dietFullXpAwarded: false,
+  focusSessionsXpCount: 0,
+  mentalXpAwarded: false,
+  meals: [],
+  mentalChat: []
 };
 
 const initialUserState = {
@@ -65,20 +66,13 @@ const initialUserState = {
   highestTrainingXp: 0
 };
 
-// ─── Progressive XP Threshold ───────────────────────────────────────────────
-// Each level requires more XP than the last.
-// Level 1→2: 1000 XP, Level 2→3: 1200 XP, Level 3→4: 1400 XP, etc.
 const xpForNextLevel = (level) => 1000 + (Math.max(1, level) - 1) * 200;
 
-// ─── Central XP + Level-Up Award ─────────────────────────────────────────────
-// Adds xpAmount to user.xp and handles level-up(s) using progressive thresholds.
-// Returns updated { xp, level } fields to spread into userUpdates.
 const awardXp = (currentXp, currentLevel, xpAmount) => {
   let xp = Number(currentXp) || 0;
   let level = Number(currentLevel) || 1;
   xp += xpAmount;
 
-  // Keep levelling up as long as accumulated XP in this level exceeds the threshold
   let threshold = xpForNextLevel(level);
   while (xp >= threshold) {
     xp -= threshold;
@@ -95,13 +89,12 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
   let updatedGoals = { ...state.dailyGoals };
   let updatedHistory = [...(state.history || [])];
 
-  // 1. Check if it is a new day before merging new goals
   if (updatedUser.lastActiveDate && updatedUser.lastActiveDate !== today) {
     const lastDate = updatedUser.lastActiveDate;
     const d1 = new Date(lastDate);
     const d2 = new Date(today);
-    d1.setHours(0,0,0,0);
-    d2.setHours(0,0,0,0);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
     const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
 
     const activityDone =
@@ -120,33 +113,28 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
       streakKept
     });
 
-    // Keep only last 30 days of history
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
     updatedHistory = updatedHistory.filter(entry => entry.date >= cutoffDate);
 
-    // Reset daily goals but retain targets
-    updatedGoals = { 
-        ...initialDailyGoals, 
-        waterTarget: updatedGoals.waterTarget,
-        calorieTarget: updatedGoals.calorieTarget,
-        focusTarget: updatedGoals.focusTarget
+    updatedGoals = {
+      ...initialDailyGoals,
+      waterTarget: updatedGoals.waterTarget,
+      calorieTarget: updatedGoals.calorieTarget,
+      focusTarget: updatedGoals.focusTarget
     };
 
     updatedUser.currentStreak = streakKept ? updatedUser.currentStreak : 0;
     updatedUser.lastActiveDate = today;
   }
 
-  // 2. Set lastActiveDate to today if null
   if (!updatedUser.lastActiveDate) {
     updatedUser.lastActiveDate = today;
   }
 
-  // 3. Merge new goal updates safely (these apply to the CURRENT day now)
   updatedGoals = { ...updatedGoals, ...goalUpdates };
 
-  // 4. Instantly increment streak if doing any activity and not already incremented today
   const hasActivityToday =
     (updatedGoals.waterLogged || 0) > 0 ||
     (updatedGoals.calorieLogged || 0) > 0 ||
@@ -160,9 +148,6 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
     updatedUser.currentStreak = (updatedUser.currentStreak || 0) + 1;
   }
 
-  // Note: Level-up is driven purely by XP (every 1000 XP) in logExerciseCompletion.
-  // Daily-goal completion does NOT grant a level-up; the two systems are independent.
-
   return {
     user: updatedUser,
     dailyGoals: updatedGoals,
@@ -171,6 +156,12 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
 };
 
 const syncToCloud = async (state) => {
+  // SHIELD: Prevent writes if the app is still fetching initial data
+  if (state.isDownloadingData) {
+    console.log("Saving blocked: Still loading initial data from Firebase.");
+    return;
+  }
+
   if (!isFirebaseConnected || !state.user || !state.user.uid) return;
 
   try {
@@ -188,6 +179,8 @@ const syncToCloud = async (state) => {
 const useHealthStore = create(
   persist(
     (set, get) => ({
+      // GATEKEEPER FLAG: Locks down the app on boot
+      isDownloadingData: true,
       user: { ...initialUserState },
       dailyGoals: { ...initialDailyGoals },
       history: [],
@@ -198,31 +191,62 @@ const useHealthStore = create(
       hydrateUserFromCloud: async (uid) => {
         if (!isFirebaseConnected || !db) return;
         try {
-          const userDocRef = doc(db, 'users', uid);
-          const docSnap = await getDoc(userDocRef);
+          if (cloudSnapshotUnsubscribe) {
+            cloudSnapshotUnsubscribe();
+            cloudSnapshotUnsubscribe = null;
+          }
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
+          set((state) => ({
+            user: { ...initialUserState, uid, email: state.user.email, name: state.user.name, isAuthenticated: true },
+            dailyGoals: { ...initialDailyGoals },
+            history: []
+          }));
 
-            const cloudUser = { ...initialUserState, ...data.user, isAuthenticated: true };
-            const cloudGoals = { ...initialDailyGoals, ...data.dailyGoals };
-            const cloudHistory = data.history || [];
+          const q = query(collection(db, 'users'), where('user.uid', '==', uid));
 
-            // Temporarily construct a state with cloud data
-            const cloudState = {
+          cloudSnapshotUnsubscribe = onSnapshot(q, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+              const docSnap = querySnapshot.docs[0];
+              const data = docSnap.data();
+
+              if (data.user?.uid !== uid) {
+                alert("Error: User document context mismatch. Anonymous or incorrect mapping detected.");
+                get().logout();
+                return;
+              }
+
+              const cloudUser = { ...initialUserState, ...data.user, isAuthenticated: true };
+              const cloudGoals = { ...initialDailyGoals, ...data.dailyGoals };
+              const cloudHistory = data.history || [];
+
+              const cloudState = {
                 user: cloudUser,
                 dailyGoals: cloudGoals,
                 history: cloudHistory
-            };
+              };
 
-            // Process it through applyActivity to handle any date changes
-            const finalState = applyActivity(cloudState);
-            
-            set(finalState);
-            syncToCloud(get());
-          }
+              const finalState = applyActivity(cloudState);
+              const needsSync = finalState.user.lastActiveDate !== cloudState.user.lastActiveDate;
+
+              // RELEASE THE GATE: Data is fully merged
+              set({ ...finalState, isDownloadingData: false });
+
+              if (needsSync) {
+                syncToCloud(get());
+              }
+            } else {
+              alert("Error: Real-time sync failed. No valid user profile found for this UID.");
+              get().logout();
+              set({ isDownloadingData: false });
+            }
+          }, (error) => {
+            console.error("Real-time listener failed:", error);
+            set({ isDownloadingData: false });
+          });
+
         } catch (error) {
-          console.warn("Failed to hydrate from cloud. Using baseline or local data:", error);
+          console.warn("Failed to initialize cloud real-time listener:", error);
+          set({ isDownloadingData: false });
         }
       },
 
@@ -235,6 +259,7 @@ const useHealthStore = create(
           const uid = userCredential.user.uid;
 
           set((state) => ({
+            isDownloadingData: false, // New account, safe to unlock
             user: {
               ...initialUserState,
               uid,
@@ -268,6 +293,7 @@ const useHealthStore = create(
           const uid = userCredential.user.uid;
 
           set((state) => ({
+            isDownloadingData: true, // Lock immediately upon login until hydrate triggers
             user: {
               ...state.user,
               uid,
@@ -285,6 +311,10 @@ const useHealthStore = create(
 
       logout: async () => {
         try {
+          if (cloudSnapshotUnsubscribe) {
+            cloudSnapshotUnsubscribe();
+            cloudSnapshotUnsubscribe = null;
+          }
           if (isFirebaseConnected && auth) {
             await signOut(auth);
           }
@@ -292,6 +322,7 @@ const useHealthStore = create(
           console.error("Sign out encountered an error:", error);
         } finally {
           set({
+            isDownloadingData: true,
             user: { ...initialUserState },
             dailyGoals: { ...initialDailyGoals },
             history: []
@@ -306,6 +337,7 @@ const useHealthStore = create(
       },
 
       updateDailyTargets: (newTargets) => {
+        if (get().isDownloadingData) return;
         const allowed = ['waterTarget', 'calorieTarget', 'focusTarget'];
         const safeTargets = Object.fromEntries(
           Object.entries(newTargets)
@@ -317,6 +349,7 @@ const useHealthStore = create(
       },
 
       addWater: (ml) => {
+        if (get().isDownloadingData) return;
         set((state) => {
           const goals = state.dailyGoals;
           const user = state.user;
@@ -327,20 +360,16 @@ const useHealthStore = create(
           let xpToAward = 0;
           const goalUpdates = { waterLogged: newLogged };
 
-          // 10 XP at 50% hydration (once/day)
           if (ratio >= 0.5 && !goals.waterHalfXpAwarded) {
             xpToAward += 10;
             goalUpdates.waterHalfXpAwarded = true;
           }
-          // 15 XP bonus at 100% hydration (once/day)
           if (ratio >= 1 && !goals.waterFullXpAwarded) {
             xpToAward += 15;
             goalUpdates.waterFullXpAwarded = true;
           }
 
-          const userUpdates = xpToAward > 0
-            ? awardXp(user.xp, user.level, xpToAward)
-            : {};
+          const userUpdates = xpToAward > 0 ? awardXp(user.xp, user.level, xpToAward) : {};
 
           if (xpToAward > 0) {
             goalUpdates.dailyXpEarned = (Number(goals.dailyXpEarned) || 0) + xpToAward;
@@ -352,6 +381,7 @@ const useHealthStore = create(
       },
 
       logCalories: (cals, p, c, f, mealName = '', mealType = '') => {
+        if (get().isDownloadingData) return;
         set((state) => {
           const goals = state.dailyGoals;
           const user = state.user;
@@ -372,19 +402,15 @@ const useHealthStore = create(
             meals: updatedMeals
           };
 
-          // 5 XP per meal log, capped at 3 logs/day (max 15 XP)
           if (mealCount <= 3) {
             xpToAward += 5;
           }
-          // 20 XP bonus for hitting calorie target (once/day)
           if (newLogged >= target && !goals.dietFullXpAwarded) {
             xpToAward += 20;
             goalUpdates.dietFullXpAwarded = true;
           }
 
-          const userUpdates = xpToAward > 0
-            ? awardXp(user.xp, user.level, xpToAward)
-            : {};
+          const userUpdates = xpToAward > 0 ? awardXp(user.xp, user.level, xpToAward) : {};
 
           if (xpToAward > 0) {
             goalUpdates.dailyXpEarned = (Number(goals.dailyXpEarned) || 0) + xpToAward;
@@ -396,11 +422,11 @@ const useHealthStore = create(
       },
 
       addFocusTime: (mins) => {
+        if (get().isDownloadingData) return;
         set((state) => {
           const goals = state.dailyGoals;
           const user = state.user;
           const newLogged = goals.focusLogged + mins;
-          // Each addFocusTime call = 1 completed pomodoro (25 min session)
           const sessionsRewarded = (goals.focusSessionsXpCount || 0) + 1;
 
           let xpToAward = 0;
@@ -409,14 +435,11 @@ const useHealthStore = create(
             focusSessionsXpCount: sessionsRewarded
           };
 
-          // 15 XP per completed pomodoro, capped at 3 sessions/day (max 45 XP)
           if (sessionsRewarded <= 3) {
             xpToAward = 15;
           }
 
-          const userUpdates = xpToAward > 0
-            ? awardXp(user.xp, user.level, xpToAward)
-            : {};
+          const userUpdates = xpToAward > 0 ? awardXp(user.xp, user.level, xpToAward) : {};
 
           if (xpToAward > 0) {
             goalUpdates.dailyXpEarned = (Number(goals.dailyXpEarned) || 0) + xpToAward;
@@ -428,6 +451,7 @@ const useHealthStore = create(
       },
 
       setMentalComplete: (bool) => {
+        if (get().isDownloadingData) return;
         set((state) => {
           const goals = state.dailyGoals;
           const user = state.user;
@@ -435,7 +459,6 @@ const useHealthStore = create(
           const goalUpdates = { mentalLogged: bool };
           let userUpdates = {};
 
-          // 20 XP for completing mental health check-in once/day
           if (bool && !goals.mentalXpAwarded) {
             goalUpdates.mentalXpAwarded = true;
             goalUpdates.dailyXpEarned = (Number(goals.dailyXpEarned) || 0) + 20;
@@ -448,16 +471,28 @@ const useHealthStore = create(
       },
 
       saveMentalChat: (chatLog) => {
+        if (get().isDownloadingData) return;
         set((state) => applyActivity(state, { mentalChat: chatLog }));
         syncToCloud(get());
       },
 
       completeWorkout: () => {
-        set((state) => applyActivity(state, { workoutsCompleted: true }));
+        if (get().isDownloadingData) return;
+        const { dailyGoals, user } = get();
+        const currentHighestTrainingXp = Number(user.highestTrainingXp) || 0;
+        const currentTrainingXp = Number(dailyGoals.trainingXpEarned) || 0;
+        const newHighestTrainingXp = currentTrainingXp > currentHighestTrainingXp ? currentTrainingXp : currentHighestTrainingXp;
+
+        const userUpdates = {
+          highestTrainingXp: newHighestTrainingXp
+        };
+
+        set((state) => applyActivity(state, { workoutsCompleted: true }, userUpdates));
         syncToCloud(get());
       },
 
       logExerciseCompletion: (exerciseId, xpAmount = 0) => {
+        if (get().isDownloadingData) return;
         const { dailyGoals, user } = get();
         const existing = dailyGoals.completedExerciseIds || [];
 
@@ -476,7 +511,6 @@ const useHealthStore = create(
         const newTrainingXp = updated.reduce((sum, id) => sum + (exerciseXpMap[id] || 0), 0);
         const newHighestTrainingXp = newTrainingXp > currentHighestTrainingXp ? newTrainingXp : currentHighestTrainingXp;
 
-        // Use progressive level-up threshold via awardXp helper
         const { xp: newXp, level: newLevel } = awardXp(user.xp, user.level, xpAmount);
 
         const goalUpdates = {
@@ -498,6 +532,7 @@ const useHealthStore = create(
       },
 
       resetExerciseCompletion: (exerciseId, xpAmount = 0) => {
+        if (get().isDownloadingData) return;
         const { dailyGoals, user } = get();
         const existing = dailyGoals.completedExerciseIds || [];
 
@@ -506,9 +541,7 @@ const useHealthStore = create(
 
         const currentDailyXp = Number(dailyGoals.dailyXpEarned) || 0;
 
-        // Subtract XP but don't go below 0, and recalculate level from scratch
         const rawXp = Math.max(0, (Number(user.xp) || 0) - xpAmount);
-        // Recompute level from total XP using progressive thresholds
         let remainingXp = rawXp;
         let recalcLevel = 1;
         let thresh = xpForNextLevel(recalcLevel);
@@ -537,6 +570,7 @@ const useHealthStore = create(
       },
 
       checkDailyReset: () => {
+        if (get().isDownloadingData) return;
         set((state) => applyActivity(state));
         syncToCloud(get());
       }
@@ -544,6 +578,7 @@ const useHealthStore = create(
     {
       name: 'scandi_wellness_cache',
       partialize: (state) => ({
+        // Ensure the gatekeeper flag is NOT persisted, so it always defaults to true on reload
         user: state.user,
         dailyGoals: state.dailyGoals,
         history: state.history,
