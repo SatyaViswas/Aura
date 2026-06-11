@@ -1,3 +1,22 @@
-.env
+# Dependencies
 node_modules/
+
+# Production build artifacts
 dist/
+build/
+out/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# OS system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# VS Code / Editor settings
+.vscode/
+.idea/
+*.log

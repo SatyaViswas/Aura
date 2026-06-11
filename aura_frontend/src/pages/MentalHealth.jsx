@@ -225,7 +225,8 @@ const MentalHealth = () => {
       sanitizedText = sanitizedText.slice(0, -1) + '...';
     }
     const encodedText = encodeURIComponent(sanitizedText);
-    const streamUrl = `http://anwdz-106-222-235-37.free.pinggy.net/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
+    const backendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+    const streamUrl = `${backendBase}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
 
     // Create and preload the audio object immediately to fetch the stream in the background
     const audioObj = new Audio(streamUrl);

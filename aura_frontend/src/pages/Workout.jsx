@@ -303,7 +303,10 @@ const CountdownTimer = ({ exercise, onComplete }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PoseAnalyzerOverlay = ({ exercise, onClose }) => {
-  const wsUrl = `ws://http://localhost:8000/ws/${exercise.id}`;
+  const backendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  // Converts https://... into wss://... automatically in production
+  const wsBase = backendBase.replace(/^http/, "ws");
+  const wsUrl = `${wsBase}/ws/${exercise.id}`;
   const [dots, setDots] = useState('');
 
   useEffect(() => {

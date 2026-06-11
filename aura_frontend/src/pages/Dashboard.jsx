@@ -38,11 +38,11 @@ const Dashboard = () => {
   const past35Days = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayString = today.toISOString().split('T')[0];
 
     // Initialize consistency cycle if not present
     if (!localStorage.getItem('consistencyCycleStartDate')) {
-      localStorage.setItem('consistencyCycleStartDate', todayStr);
+      localStorage.setItem('consistencyCycleStartDate', todayString);
     }
 
     let cycleStartDateStr = localStorage.getItem('consistencyCycleStartDate');
@@ -53,18 +53,92 @@ const Dashboard = () => {
 
     // Reset cycle if 35 or more days have elapsed
     if (daysSinceCycleStart >= 35 || daysSinceCycleStart < 0) {
-      localStorage.setItem('consistencyCycleStartDate', todayStr);
-      cycleStartDateStr = todayStr;
-      cycleStartDate = new Date(todayStr);
+      localStorage.setItem('consistencyCycleStartDate', todayString);
+      cycleStartDateStr = todayString;
+      cycleStartDate = new Date(todayString);
       cycleStartDate.setHours(0, 0, 0, 0);
       daysSinceCycleStart = 0;
     }
 
     // Build history map from the history array
     const historyMap = history.reduce((acc, curr) => {
-      acc[curr.date] = curr;
+      if (curr && curr.date) {
+        acc[curr.date] = curr;
+      }
       return acc;
     }, {});
+
+    // Consistency tracking evaluation function
+    const evaluateConsistencyStatus = (entry, currentUtcDateStr) => {
+      // Create a shallow copy of the entry state before modifying it
+      const entryCopy = { ...entry };
+
+      // Absolute Date Matching: Only target Today if entry date exactly matches current UTC date string
+      if (entryCopy.date === currentUtcDateStr) {
+        // Create a shallow copy of dailyGoals state before modifying or evaluating it
+        const stateCopy = { ...dailyGoals };
+
+        const wP = stateCopy.waterTarget > 0 ? (stateCopy.waterLogged / stateCopy.waterTarget) : 0;
+        const dP = stateCopy.calorieTarget > 0 ? (stateCopy.calorieLogged / stateCopy.calorieTarget) : 0;
+        const fP = stateCopy.focusTarget > 0 ? (stateCopy.focusLogged / stateCopy.focusTarget) : 0;
+
+        // Logic Isolation: Explicitly verify that progress or completed status is only applied if records have data
+        const hasProgress =
+          wP > 0 ||
+          dP > 0 ||
+          fP > 0 ||
+          (stateCopy.completedExerciseIds && stateCopy.completedExerciseIds.length > 0) ||
+          stateCopy.workoutsCompleted ||
+          stateCopy.mentalLogged;
+
+        if (hasProgress) {
+          const streakKept = wP >= 1 && dP >= 1 && fP >= 1 && stateCopy.workoutsCompleted && stateCopy.mentalLogged;
+          if (streakKept) {
+            entryCopy.status = 'full';
+          } else {
+            entryCopy.status = 'partial';
+          }
+        } else {
+          entryCopy.status = 'none';
+        }
+      } else if (entryCopy.date < currentUtcDateStr) {
+        // Evaluate historical archived data for past days in this cycle
+        const historyEntry = historyMap[entryCopy.date];
+
+        // Logic Isolation: Verify that the status is only applied if the record for that specific date actually exists and contains data
+        if (historyEntry && historyEntry.goals) {
+          const g = historyEntry.goals;
+          const wP = g.waterTarget > 0 ? (g.waterLogged / g.waterTarget) : 0;
+          const dP = g.calorieTarget > 0 ? (g.calorieLogged / g.calorieTarget) : 0;
+          const fP = g.focusTarget > 0 ? (g.focusLogged / g.focusTarget) : 0;
+
+          const hasProgress =
+            wP > 0 ||
+            dP > 0 ||
+            fP > 0 ||
+            (g.completedExerciseIds && g.completedExerciseIds.length > 0) ||
+            g.workoutsCompleted ||
+            g.mentalLogged;
+
+          if (hasProgress) {
+            if (historyEntry.streakKept) {
+              entryCopy.status = 'full';
+            } else {
+              entryCopy.status = 'partial';
+            }
+          } else {
+            entryCopy.status = 'none';
+          }
+        } else {
+          entryCopy.status = 'none';
+        }
+      } else {
+        // Future days in the cycle are marked 'none'
+        entryCopy.status = 'none';
+      }
+
+      return entryCopy;
+    };
 
     // Build 35-day array: starting with Day 1 (cycleStartDate) at index 0 up to Day 35 at index 34
     const days = [];
@@ -72,53 +146,10 @@ const Dashboard = () => {
       const d = new Date(cycleStartDate);
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      let status = 'none';
 
-      if (dateStr === todayStr) {
-        // Evaluate live real-time data for "Today"
-        const g = dailyGoals;
-        const wP = g.waterTarget > 0 ? (g.waterLogged / g.waterTarget) : 0;
-        const dP = g.calorieTarget > 0 ? (g.calorieLogged / g.calorieTarget) : 0;
-        const fP = g.focusTarget > 0 ? (g.focusLogged / g.focusTarget) : 0;
-        const someProgress =
-          wP > 0 || dP > 0 || fP > 0 ||
-          (g.completedExerciseIds?.length > 0) ||
-          g.workoutsCompleted ||
-          g.mentalLogged;
-
-        const streakKept = wP >= 1 && dP >= 1 && fP >= 1 && g.workoutsCompleted && g.mentalLogged;
-
-        if (streakKept) {
-          status = 'full';
-        } else if (someProgress) {
-          status = 'partial';
-        }
-      } else if (dateStr < todayStr) {
-        // Evaluate historical archived data for past days in this cycle
-        const entry = historyMap[dateStr];
-        if (entry) {
-          const g = entry.goals;
-          const wP = g.waterTarget > 0 ? (g.waterLogged / g.waterTarget) : 0;
-          const dP = g.calorieTarget > 0 ? (g.calorieLogged / g.calorieTarget) : 0;
-          const fP = g.focusTarget > 0 ? (g.focusLogged / g.focusTarget) : 0;
-          const someProgress =
-            wP > 0 || dP > 0 || fP > 0 ||
-            (g.completedExerciseIds?.length > 0) ||
-            g.workoutsCompleted ||
-            g.mentalLogged;
-
-          if (entry.streakKept) {
-            status = 'full';
-          } else if (someProgress) {
-            status = 'partial';
-          }
-        }
-      } else {
-        // Future days in the cycle are marked 'none'
-        status = 'none';
-      }
-
-      days.push({ date: dateStr, status });
+      const initialEntry = { date: dateStr, status: 'none' };
+      const updatedEntry = evaluateConsistencyStatus(initialEntry, todayString);
+      days.push(updatedEntry);
     }
 
     return days;
