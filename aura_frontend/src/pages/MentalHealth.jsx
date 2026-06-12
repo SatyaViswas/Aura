@@ -59,7 +59,7 @@ const MentalHealth = () => {
   const recognitionRef = useRef(null);
   const handleSendMessageRef = useRef();
   const isVoiceModeActiveRef = useRef(isVoiceModeActive);
-  const voiceAgentRef = useRef(null);
+  const audioPlayerRef = useRef(new Audio());
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
 
@@ -86,7 +86,7 @@ const MentalHealth = () => {
   const [breathPhase, setBreathPhase] = useState('ready'); // 'ready' | 'in' | 'hold' | 'out'
   const breathTimerRef = useRef(null);
   const [selectedTrack, setSelectedTrack] = useState('40hz');
-  const audioPlayerRef = useRef(null);
+  const ambientPlayerRef = useRef(null);
 
   // Absolute paths pointing straight to your new public/audio folder structure
   const audioTracks = [
@@ -136,20 +136,20 @@ const MentalHealth = () => {
 
   // Control playback based on breathingActive state
   useEffect(() => {
-    if (!audioPlayerRef.current) return;
+    if (!ambientPlayerRef.current) return;
     if (breathingActive) {
-      audioPlayerRef.current.play().catch(e => console.warn('Audio playback blocked:', e));
+      ambientPlayerRef.current.play().catch(e => console.warn('Audio playback blocked:', e));
     } else {
-      audioPlayerRef.current.pause();
+      ambientPlayerRef.current.pause();
     }
   }, [breathingActive]);
 
   // Control track change mid-session
   useEffect(() => {
-    if (!audioPlayerRef.current) return;
+    if (!ambientPlayerRef.current) return;
     if (breathingActive) {
-      audioPlayerRef.current.load();
-      audioPlayerRef.current.play().catch(e => console.warn('Audio playback blocked on track change:', e));
+      ambientPlayerRef.current.load();
+      ambientPlayerRef.current.play().catch(e => console.warn('Audio playback blocked on track change:', e));
     }
   }, [selectedTrack]);
 
@@ -198,9 +198,6 @@ const MentalHealth = () => {
     if (audioQueueRef.current.length === 0) {
       isPlayingRef.current = false;
       setAiSpeaking(false);
-      if (isVoiceModeActiveRef.current && recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch (e) { }
-      }
       return;
     }
 
@@ -208,10 +205,11 @@ const MentalHealth = () => {
     setAiSpeaking(true);
     const nextUrl = audioQueueRef.current.shift();
 
-    if (voiceAgentRef.current) {
-      voiceAgentRef.current.src = nextUrl;
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.src = nextUrl;
+      audioPlayerRef.current.onended = () => playNextInQueue();
       try {
-        await voiceAgentRef.current.play();
+        await audioPlayerRef.current.play();
       } catch (e) {
         if (e.name === 'AbortError') {
           // Silently catch AbortError when play is interrupted
@@ -240,25 +238,48 @@ const MentalHealth = () => {
 
   const speakResponse = (textToSpeak) => {
     audioQueueRef.current = [];
-    if (voiceAgentRef.current) {
-      voiceAgentRef.current.pause();
-      voiceAgentRef.current.src = "";
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.src = "";
     }
     isPlayingRef.current = false;
     enqueueAudio(textToSpeak);
+  };
+
+  const startListeningGracefully = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        setMicListening(false);
+      }
+    }
+  };
+
+  const handleCircleTap = () => {
+    if (aiSpeaking) {
+      // Barge-in
+      audioQueueRef.current = [];
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.src = "";
+      }
+      setAiSpeaking(false);
+      isPlayingRef.current = false;
+      startListeningGracefully();
+    } else if (!micListening && !aiSpeaking && !aiProcessing) {
+      // Manual trigger
+      startListeningGracefully();
+    }
   };
 
   const toggleVoiceMode = () => {
     const nextState = !isVoiceModeActive;
     setIsVoiceModeActive(nextState);
     if (nextState) {
-      if (voiceAgentRef.current) {
-        voiceAgentRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-        voiceAgentRef.current.play().then(() => {
-          voiceAgentRef.current.pause();
-        }).catch(e => {
-          if (e.name !== 'AbortError') console.warn("Audio unlock failed:", e);
-        });
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.src = "data:audio/mp3;base64,/";
+        audioPlayerRef.current.play().catch(() => {});
       }
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -269,18 +290,6 @@ const MentalHealth = () => {
 
         recognitionRef.current.onstart = () => setMicListening(true);
         recognitionRef.current.onend = () => setMicListening(false);
-
-        // 3. Cross-Browser Mic Interruption (Barge-In)
-        recognitionRef.current.onsoundstart = () => {
-          if (voiceAgentRef.current && (!voiceAgentRef.current.paused || audioQueueRef.current.length > 0)) {
-            audioQueueRef.current = [];
-            voiceAgentRef.current.pause();
-            voiceAgentRef.current.src = "";
-            setAiSpeaking(false);
-            setMicListening(true);
-            isPlayingRef.current = false;
-          }
-        };
 
         recognitionRef.current.onresult = (event) => {
           const transcript = event.results[0][0].transcript;
@@ -293,9 +302,9 @@ const MentalHealth = () => {
     } else {
       // 4. CLEANUP ON CLOSING VOICE OVERLAY
       audioQueueRef.current = [];
-      if (voiceAgentRef.current) {
-        voiceAgentRef.current.pause();
-        voiceAgentRef.current.src = "";
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.src = "";
       }
       isPlayingRef.current = false;
       if (recognitionRef.current) {
@@ -310,9 +319,9 @@ const MentalHealth = () => {
   useEffect(() => {
     return () => {
       audioQueueRef.current = [];
-      if (voiceAgentRef.current) {
-        voiceAgentRef.current.pause();
-        voiceAgentRef.current.src = "";
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.src = "";
       }
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
@@ -389,9 +398,9 @@ const MentalHealth = () => {
 
       if (isVoiceModeActive) {
         audioQueueRef.current = [];
-        if (voiceAgentRef.current) {
-          voiceAgentRef.current.pause();
-          voiceAgentRef.current.src = "";
+        if (audioPlayerRef.current) {
+          audioPlayerRef.current.pause();
+          audioPlayerRef.current.src = "";
         }
         isPlayingRef.current = false;
       }
@@ -803,14 +812,9 @@ const MentalHealth = () => {
         </section>
       </div>
       <audio
-        ref={audioPlayerRef}
+        ref={ambientPlayerRef}
         src={audioTracks.find(t => t.id === selectedTrack)?.url}
         loop
-      />
-      <audio
-        ref={voiceAgentRef}
-        className="hidden"
-        onEnded={playNextInQueue}
       />
 
       {/* ── Fluid Voice Mode Overlay ── */}
@@ -829,7 +833,8 @@ const MentalHealth = () => {
 
             {/* Fluid Morphing Circle */}
             <div className="flex-1 flex items-center justify-center relative w-full">
-              <motion.div
+              <motion.button
+                onClick={handleCircleTap}
                 animate={{
                   borderRadius: [
                     "42% 58% 70% 30% / 45% 45% 55% 55%",
@@ -850,15 +855,15 @@ const MentalHealth = () => {
                   },
                   rotate: { duration: 10, repeat: Infinity, ease: "linear" }
                 }}
-                className={`w-64 h-64 shadow-[0_0_80px_rgba(74,107,93,0.6)] ${aiSpeaking ? 'bg-primary' : micListening ? 'bg-[#DCE4E0]' : 'bg-primary/50'}`}
-              />
-
-              {/* Status Text Overlay */}
-              <div className="absolute flex flex-col items-center">
-                <span className={`text-sm font-medium tracking-widest uppercase ${aiSpeaking ? 'text-white' : micListening ? 'text-primary' : 'text-white/80'}`}>
-                  {aiSpeaking ? "Speaking" : aiProcessing ? "Thinking" : micListening ? "Listening" : "Ready"}
-                </span>
-              </div>
+                className={`w-64 h-64 shadow-[0_0_80px_rgba(74,107,93,0.6)] border-none outline-none focus:outline-none flex items-center justify-center relative cursor-pointer ${aiSpeaking ? 'bg-primary' : micListening ? 'bg-[#DCE4E0]' : 'bg-primary/50'}`}
+              >
+                {/* Status Text Overlay moved inside button */}
+                <div className="absolute flex flex-col items-center pointer-events-none">
+                  <span className={`text-sm font-medium tracking-widest uppercase ${aiSpeaking ? 'text-white' : micListening ? 'text-primary' : 'text-white/80'}`}>
+                    {aiSpeaking ? "Tap to Interrupt" : aiProcessing ? "Thinking" : micListening ? "Listening" : "Tap Circle to Speak"}
+                  </span>
+                </div>
+              </motion.button>
             </div>
 
             {/* Overlay Control Deck */}
