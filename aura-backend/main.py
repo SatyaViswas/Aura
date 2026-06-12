@@ -75,6 +75,7 @@ from exercises import (
 import os
 from utils.redis_client import redis_client
 from config import config
+import io
 
 logging.basicConfig(level=logging.INFO)
 
@@ -490,13 +491,20 @@ async def text_to_speech(text: str = "", gender: str = "female"):
     try:
         communicate = edge_tts.Communicate(text, voice, rate="-5%")
         
-        async def audio_generator():
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    yield chunk["data"]
+        # 🧠 IN-MEMORY BUFFER FIX:
+        # Buffer the entire audio file in RAM first so the React <audio> 
+        # element receives a fully formed MP3 instead of fragmented chunks.
+        audio_stream = io.BytesIO()
+        
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_stream.write(chunk["data"])
+                
+        # Reset the memory pointer to the beginning of the file
+        audio_stream.seek(0)
 
         return StreamingResponse(
-            audio_generator(), 
+            audio_stream, 
             media_type="audio/mpeg",
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",

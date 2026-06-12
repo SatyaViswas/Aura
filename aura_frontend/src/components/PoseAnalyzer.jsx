@@ -43,6 +43,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
+import { WEBSOCKET_URL } from '../config/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -57,7 +58,7 @@ const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
 /** FastAPI WebSocket base. */
-const WS_BASE = 'ws://localhost:8000/ws';
+const WS_BASE = `${WEBSOCKET_URL}/ws/${exerciseId}?user_id=${user.uid}`;
 
 /** Canvas overlay colours matching Scandi-minimalist palette. */
 const LANDMARK_COLOR = '#4A6B5D'; // sage green
@@ -355,14 +356,14 @@ const PoseAnalyzer = ({
 
         if (typeof data.feedback === 'string') {
           const currentFeedback = data.feedback ? data.feedback.trim() : '';
-          
+
           if (currentFeedback) {
             setFeedback(currentFeedback);
           }
 
           if (currentFeedback && isVoiceEnabledRef.current) {
             const now = Date.now();
-            
+
             if (currentFeedback !== lastSpokenTextRef.current) {
               window.speechSynthesis.cancel();
               lastSpokenTextRef.current = currentFeedback;
@@ -606,13 +607,12 @@ const PoseAnalyzer = ({
         <div className="flex items-center gap-2 shrink-0">
           {/* WS status — hide label on mobile */}
           <span
-            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full ${
-              gradientStatus === WS_STATUS.OPEN
-                ? 'bg-[#DCE4E0] text-[#4A6B5D]'
-                : gradientStatus === WS_STATUS.ERROR
-                  ? 'bg-red-50 text-red-500 border border-red-100'
-                  : 'bg-background text-text-secondary border border-border'
-            }`}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-full ${gradientStatus === WS_STATUS.OPEN
+              ? 'bg-[#DCE4E0] text-[#4A6B5D]'
+              : gradientStatus === WS_STATUS.ERROR
+                ? 'bg-red-50 text-red-500 border border-red-100'
+                : 'bg-background text-text-secondary border border-border'
+              }`}
           >
             {gradientStatus === WS_STATUS.OPEN ? (
               <Wifi className="w-3 h-3" />
@@ -637,11 +637,10 @@ const PoseAnalyzer = ({
               });
             }}
             title={isVoiceEnabled ? 'Disable voice' : 'Enable voice'}
-            className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium transition-all shadow-sm border ${
-              isVoiceEnabled
-                ? 'bg-[#DCE4E0] text-[#4A6B5D] border-[#4A6B5D]/20'
-                : 'bg-background text-text-secondary border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20'
-            }`}
+            className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium transition-all shadow-sm border ${isVoiceEnabled
+              ? 'bg-[#DCE4E0] text-[#4A6B5D] border-[#4A6B5D]/20'
+              : 'bg-background text-text-secondary border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20'
+              }`}
           >
             {isVoiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             <span className="hidden sm:inline">{isVoiceEnabled ? 'Voice On' : 'Voice Off'}</span>

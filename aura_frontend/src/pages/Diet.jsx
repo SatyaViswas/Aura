@@ -3,19 +3,20 @@ import useHealthStore from '../store/healthStore';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Plus, Loader2, Sparkles, Coffee, Sun, Moon, Apple, Flame } from 'lucide-react';
+import { BACKEND_URL } from '../config/api';
 
 const Diet = () => {
   const dailyGoals = useHealthStore((state) => state.dailyGoals);
   const logCalories = useHealthStore((state) => state.logCalories);
   const theme = useHealthStore((state) => state.theme);
-  
+
   const [activeTab, setActiveTab] = useState('Breakfast');
   const [mealName, setMealName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fats, setFats] = useState('');
-  
+
   const [aiInput, setAiInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -23,7 +24,7 @@ const Diet = () => {
   const calorieProgress = Math.min((calorieLogged / calorieTarget) * 100, 100) || 0;
 
   const macroData = [
-    { name: 'Protein', value: macroProtein || 1 }, 
+    { name: 'Protein', value: macroProtein || 1 },
     { name: 'Carbs', value: macroCarbs || 1 },
     { name: 'Fats', value: macroFat || 1 },
   ];
@@ -36,7 +37,7 @@ const Diet = () => {
     const p = parseInt(protein, 10) || 0;
     const cb = parseInt(carbs, 10) || 0;
     const f = parseInt(fats, 10) || 0;
-    
+
     if (c > 0) {
       logCalories(c, p, cb, f, mealName, activeTab);
       setMealName('');
@@ -50,22 +51,22 @@ const Diet = () => {
   const handleAiLogSubmit = async (e) => {
     e.preventDefault();
     if (!aiInput.trim()) return;
-    
+
     setIsAnalyzing(true);
     try {
-      const response = await fetch('http://localhost:8000/api/nutrition/parse', {
+      const response = await fetch(`${BACKEND_URL}/api/nutrition/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          food_description: aiInput, 
-          meal_type: activeTab 
+        body: JSON.stringify({
+          food_description: aiInput,
+          meal_type: activeTab
         })
       });
-      
+
       if (!response.ok) throw new Error('Failed to parse nutrition');
-      
+
       const parsedData = await response.json();
-      
+
       logCalories(
         parsedData.calories,
         parsedData.protein,
@@ -74,7 +75,7 @@ const Diet = () => {
         parsedData.display_name,
         activeTab
       );
-      
+
       setAiInput('');
     } catch (error) {
       console.error('AI Log Error:', error);
@@ -84,7 +85,7 @@ const Diet = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -108,7 +109,7 @@ const Diet = () => {
           </div>
         </div>
         <div className="w-full h-4 bg-background rounded-full overflow-hidden shadow-inner">
-          <motion.div 
+          <motion.div
             className="h-full bg-primary"
             initial={{ width: 0 }}
             animate={{ width: `${calorieProgress}%` }}
@@ -125,7 +126,7 @@ const Diet = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={totalMacros === 0 ? [{name: 'Empty', value: 1}] : macroData}
+                  data={totalMacros === 0 ? [{ name: 'Empty', value: 1 }] : macroData}
                   innerRadius={90}
                   outerRadius={120}
                   paddingAngle={2}
@@ -140,8 +141,8 @@ const Diet = () => {
                     ))
                   )}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', backgroundColor: theme === 'dark' ? '#262626' : '#FFFFFF' }} 
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', backgroundColor: theme === 'dark' ? '#262626' : '#FFFFFF' }}
                   itemStyle={{ color: theme === 'dark' ? '#FBFBF9' : '#2A2A2A', fontWeight: 300 }}
                 />
               </PieChart>
@@ -170,15 +171,14 @@ const Diet = () => {
         {/* Meal Input Console */}
         <section className="lg:col-span-7 bg-surface rounded-[1.5rem] p-8 md:p-10 shadow-natural flex flex-col">
           <h2 className="text-xl font-light text-text-primary mb-6">Log Meal</h2>
-          
+
           <div className="flex gap-2 p-1 bg-background rounded-xl mb-8 overflow-x-auto no-scrollbar">
             {['Breakfast', 'Lunch', 'Dinner', 'Snacks'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                  activeTab === tab ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
-                }`}
+                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                  }`}
               >
                 {tab}
               </button>
@@ -216,7 +216,7 @@ const Diet = () => {
               </button>
             </form>
           </div>
-          
+
           <div className="relative flex items-center py-2 mb-6">
             <div className="flex-grow border-t border-border"></div>
             <span className="flex-shrink-0 mx-4 text-text-secondary text-sm font-light">or log manually</span>
@@ -297,7 +297,7 @@ const Diet = () => {
       {/* Today's Meals Section */}
       <section className="bg-surface rounded-[1.5rem] p-8 md:p-10 shadow-natural mt-8">
         <h2 className="text-xl font-light text-text-primary mb-6">Today's Meals</h2>
-        
+
         {meals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-text-secondary/60">
             <Apple className="w-12 h-12 mb-3 opacity-20" />
@@ -308,14 +308,14 @@ const Diet = () => {
             {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map(mealType => {
               const categoryMeals = meals.filter(m => m.type === mealType);
               if (categoryMeals.length === 0) return null;
-              
+
               const iconMap = {
                 Breakfast: <Coffee className="w-5 h-5" />,
                 Lunch: <Sun className="w-5 h-5" />,
                 Snacks: <Apple className="w-5 h-5" />,
                 Dinner: <Moon className="w-5 h-5" />
               };
-              
+
               return (
                 <div key={mealType} className="space-y-4">
                   <div className="flex items-center gap-2 text-text-primary pb-2 border-b border-border/50">
@@ -327,13 +327,13 @@ const Diet = () => {
                       {categoryMeals.reduce((acc, m) => acc + (m.cals || 0), 0)} kcal
                     </span>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {categoryMeals.map(meal => (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        key={meal.id} 
+                        key={meal.id}
                         className="bg-background border border-border p-5 rounded-2xl flex flex-col justify-between hover:border-primary/20 transition-all duration-300"
                       >
                         <div className="flex justify-between items-start mb-4">
@@ -343,7 +343,7 @@ const Diet = () => {
                             <span className="text-sm font-semibold">{meal.cals}</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-between mt-auto pt-4 border-t border-border/50">
                           <div className="flex flex-col items-center">
                             <span className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Protein</span>
