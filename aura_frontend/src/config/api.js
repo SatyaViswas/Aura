@@ -1,4 +1,3 @@
-// src/config/api.js
 
 // Vite automatically sets import.meta.env.PROD to true on Netlify production builds
 const IS_PROD = import.meta.env.PROD;
