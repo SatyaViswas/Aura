@@ -198,6 +198,13 @@ const MentalHealth = () => {
     if (audioQueueRef.current.length === 0) {
       isPlayingRef.current = false;
       setAiSpeaking(false);
+      try {
+        if (isVoiceModeActiveRef.current && recognitionRef.current) {
+          recognitionRef.current.start();
+        }
+      } catch (e) {
+        console.warn("Auto-mic blocked, waiting for tap", e);
+      }
       return;
     }
 
@@ -229,6 +236,10 @@ const MentalHealth = () => {
     }
     const encodedText = encodeURIComponent(sanitizedText);
     const streamUrl = `${BACKEND_URL}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
+
+    const audioObj = new Audio(streamUrl);
+    audioObj.preload = "auto";
+    audioObj.load();
 
     audioQueueRef.current.push(streamUrl);
     if (!isPlayingRef.current) {
@@ -420,16 +431,13 @@ const MentalHealth = () => {
         ));
 
         if (isVoiceModeActive) {
-          const sentenceRegex = /([^.!?]+[.!?]+)\s+/g;
-          let match;
-          let lastIndex = 0;
-
-          while ((match = sentenceRegex.exec(sentenceBuffer)) !== null) {
-            const sentence = match[1].trim();
-            if (sentence) enqueueAudio(sentence);
-            lastIndex = sentenceRegex.lastIndex;
+          let splitMatch;
+          while ((splitMatch = sentenceBuffer.match(/([.!?])\s/)) && sentenceBuffer.length > 50) {
+            const splitIndex = splitMatch.index + 1;
+            const readyText = sentenceBuffer.slice(0, splitIndex).trim();
+            if (readyText) enqueueAudio(readyText);
+            sentenceBuffer = sentenceBuffer.slice(splitIndex).trim();
           }
-          sentenceBuffer = sentenceBuffer.substring(lastIndex);
         }
       }
 
