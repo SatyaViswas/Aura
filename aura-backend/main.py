@@ -520,11 +520,11 @@ class NutritionRequest(BaseModel):
     food_description: str
     meal_type: Optional[str] = None
 
-@app.post("/api/nutrition/parse")
+@app.post("/api/nutrition/ask")
 async def parse_nutrition(request: NutritionRequest):
     try:
         model = genAI.GenerativeModel(
-            model_name="gemini-2.5-flash-lite",
+            model_name="gemini-3.1-flash-lite",
             system_instruction='You are a precise nutrition estimator. Output strictly minified JSON only with these exact string keys: "calories" (int), "protein" (int), "carbs" (int), "fat" (int), "display_name" (string). Do not include markdown code block wrappers (like ```json), do not append explanations, and do not include white spaces outside the keys.',
             generation_config={"response_mime_type": "application/json"}
         )
