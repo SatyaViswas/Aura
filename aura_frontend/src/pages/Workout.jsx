@@ -40,6 +40,7 @@ import {
 import { workoutData } from '../config/workoutData';
 import useHealthStore from '../store/healthStore';
 import PoseAnalyzer from '../components/PoseAnalyzer';
+import { WEBSOCKET_URL } from '../config/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Motion Variants — shared across all level transitions
@@ -303,10 +304,7 @@ const CountdownTimer = ({ exercise, onComplete }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PoseAnalyzerOverlay = ({ exercise, onClose }) => {
-  const backendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-  // Converts https://... into wss://... automatically in production
-  const wsBase = backendBase.replace(/^http/, "ws");
-  const wsUrl = `${wsBase}/ws/${exercise.id}`;
+  const wsUrl = `${WEBSOCKET_URL}/ws/${exercise.id}`;
   const [dots, setDots] = useState('');
 
   useEffect(() => {

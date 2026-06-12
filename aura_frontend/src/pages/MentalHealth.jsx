@@ -3,6 +3,7 @@ import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { BACKEND_URL } from '../config/api';
 
 const MentalHealth = () => {
   const setMentalComplete = useHealthStore((state) => state.setMentalComplete);
@@ -225,8 +226,7 @@ const MentalHealth = () => {
       sanitizedText = sanitizedText.slice(0, -1) + '...';
     }
     const encodedText = encodeURIComponent(sanitizedText);
-    const backendBase = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-    const streamUrl = `${backendBase}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
+    const streamUrl = `${BACKEND_URL}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
 
     // Create and preload the audio object immediately to fetch the stream in the background
     const audioObj = new Audio(streamUrl);
