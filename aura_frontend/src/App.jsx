@@ -82,6 +82,15 @@ const AppContent = () => {
     return () => clearInterval(interval);
   }, [checkDailyReset]);
 
+  // Global focus timer ticker
+  const tickFocusTimer = useHealthStore((state) => state.tickFocusTimer);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      tickFocusTimer();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [tickFocusTimer]);
+
   // Real-Time Firebase Auth Session Listener
   useEffect(() => {
     if (!auth) {

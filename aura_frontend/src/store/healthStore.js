@@ -83,8 +83,12 @@ const awardXp = (currentXp, currentLevel, xpAmount) => {
   return { xp, level };
 };
 
+const getLocalDateString = (d = new Date()) => {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   let updatedUser = { ...state.user, ...userUpdates };
   let updatedGoals = { ...state.dailyGoals };
   let updatedHistory = [...(state.history || [])];
@@ -113,9 +117,9 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
       streakKept
     });
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
+    const historyCutoffDateObj = new Date();
+    historyCutoffDateObj.setDate(historyCutoffDateObj.getDate() - 40);
+    const cutoffDate = getLocalDateString(historyCutoffDateObj);
     updatedHistory = updatedHistory.filter(entry => entry.date >= cutoffDate);
 
     updatedGoals = {
@@ -187,6 +191,13 @@ const useHealthStore = create(
       isActiveSession: false,
       cloudSyncStatus: isFirebaseConnected ? 'Cloud Sync Active' : 'Offline Local Storage Active',
       theme: 'light',
+      focusTimer: {
+        isActive: false,
+        timeLeft: 25 * 60,
+        duration: 25 * 60,
+        accumulatedSeconds: 0,
+        lastTickTimestamp: null
+      },
 
       hydrateUserFromCloud: async (uid) => {
         if (!isFirebaseConnected || !db) return;
@@ -266,7 +277,7 @@ const useHealthStore = create(
               email,
               name: displayName,
               isAuthenticated: true,
-              lastActiveDate: new Date().toISOString().split('T')[0]
+              lastActiveDate: getLocalDateString()
             },
             dailyGoals: { ...initialDailyGoals },
             history: []
@@ -450,6 +461,124 @@ const useHealthStore = create(
         syncToCloud(get());
       },
 
+      startFocusTimer: () => {
+        if (get().isDownloadingData) return;
+        set((state) => ({
+          focusTimer: {
+            ...state.focusTimer,
+            isActive: true,
+            lastTickTimestamp: Date.now()
+          }
+        }));
+      },
+
+      pauseFocusTimer: () => {
+        set((state) => {
+          if (!state.focusTimer.isActive) return state;
+          const now = Date.now();
+          const deltaSeconds = Math.floor((now - state.focusTimer.lastTickTimestamp) / 1000);
+          return {
+            focusTimer: {
+              ...state.focusTimer,
+              isActive: false,
+              timeLeft: Math.max(0, state.focusTimer.timeLeft - deltaSeconds),
+              accumulatedSeconds: state.focusTimer.accumulatedSeconds + deltaSeconds,
+              lastTickTimestamp: null
+            }
+          };
+        });
+      },
+
+      tickFocusTimer: () => {
+        set((state) => {
+          if (!state.focusTimer.isActive || !state.focusTimer.lastTickTimestamp) return state;
+          
+          const now = Date.now();
+          const deltaSeconds = Math.floor((now - state.focusTimer.lastTickTimestamp) / 1000);
+          
+          if (deltaSeconds < 1) return state; // Only tick when a full second has passed
+          
+          const newTimeLeft = Math.max(0, state.focusTimer.timeLeft - deltaSeconds);
+          const newAccumulated = state.focusTimer.accumulatedSeconds + deltaSeconds;
+          
+          if (newTimeLeft <= 0) {
+            // Timer finished
+            setTimeout(() => {
+              get().completeFocusSession();
+            }, 0);
+            return {
+              focusTimer: {
+                ...state.focusTimer,
+                isActive: false,
+                timeLeft: 0,
+                accumulatedSeconds: newAccumulated,
+                lastTickTimestamp: null
+              }
+            };
+          }
+          
+          return {
+            focusTimer: {
+              ...state.focusTimer,
+              timeLeft: newTimeLeft,
+              accumulatedSeconds: newAccumulated,
+              lastTickTimestamp: now
+            }
+          };
+        });
+      },
+
+      completeFocusSession: () => {
+        const { focusTimer, addFocusTime } = get();
+        const minutesToLog = Math.floor(focusTimer.accumulatedSeconds / 60);
+        if (minutesToLog > 0) {
+          addFocusTime(minutesToLog);
+        }
+        set((state) => ({
+          focusTimer: {
+            isActive: false,
+            timeLeft: state.focusTimer.duration,
+            duration: state.focusTimer.duration,
+            accumulatedSeconds: 0,
+            lastTickTimestamp: null
+          }
+        }));
+      },
+
+      resetFocusTimer: () => {
+        const state = get();
+        if (state.focusTimer.isActive) {
+          get().pauseFocusTimer();
+        }
+        // Then complete to log accumulated time and reset
+        setTimeout(() => {
+          get().completeFocusSession();
+        }, 0);
+      },
+
+      setFocusDuration: (minutes) => {
+        const durationSeconds = minutes * 60;
+        set((state) => ({
+          focusTimer: {
+            isActive: false,
+            timeLeft: durationSeconds,
+            duration: durationSeconds,
+            accumulatedSeconds: 0,
+            lastTickTimestamp: null
+          }
+        }));
+      },
+
+      addFocusMinutesToTimer: (minutes) => {
+        set((state) => ({
+          focusTimer: {
+            ...state.focusTimer,
+            timeLeft: state.focusTimer.timeLeft + minutes * 60,
+            duration: state.focusTimer.duration + minutes * 60
+          }
+        }));
+      },
+
       setMentalComplete: (bool) => {
         if (get().isDownloadingData) return;
         set((state) => {
@@ -582,7 +711,8 @@ const useHealthStore = create(
         user: state.user,
         dailyGoals: state.dailyGoals,
         history: state.history,
-        theme: state.theme
+        theme: state.theme,
+        focusTimer: state.focusTimer
       }),
       merge: (persistedState, currentState) => {
         if (!persistedState) return currentState;
@@ -591,7 +721,11 @@ const useHealthStore = create(
           ...persistedState,
           theme: persistedState.theme || 'light',
           user: { ...initialUserState, ...persistedState.user },
-          dailyGoals: { ...initialDailyGoals, ...persistedState.dailyGoals }
+          dailyGoals: { ...initialDailyGoals, ...persistedState.dailyGoals },
+          focusTimer: { 
+            ...(currentState.focusTimer), 
+            ...(persistedState.focusTimer || {}) 
+          }
         };
       }
     }

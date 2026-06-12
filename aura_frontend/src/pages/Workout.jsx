@@ -207,6 +207,10 @@ const CountdownTimer = ({ exercise, onComplete }) => {
             clearInterval(intervalRef.current);
             setIsRunning(false);
             setIsDone(true);
+            // Trigger automated completion slightly after so state commits
+            setTimeout(() => {
+              if (typeof onComplete === 'function') onComplete();
+            }, 0);
             return 0;
           }
           return s - 1;
@@ -278,16 +282,7 @@ const CountdownTimer = ({ exercise, onComplete }) => {
           {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
 
-        {isDone && (
-          <button
-            onClick={onComplete}
-            className="w-11 h-11 rounded-full bg-[#4A6B5D] text-white flex items-center justify-center shadow-[0_4px_16px_rgba(74,107,93,0.3)] hover:scale-105 transition-all"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-          </button>
-        )}
-
-        {!isDone && <div className="w-11 h-11" />}
+        <div className="w-11 h-11" />
       </div>
 
       {isDone && (
@@ -717,6 +712,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
             key={sessionExercise.id} exerciseId={sessionExercise.id} exerciseName={sessionExercise.name}
             targetReps={sessionExercise.target_reps !== null ? Number(String(sessionExercise.target_reps).split("-")[0]) : null}
             estimatedXp={sessionExercise.estimated_xp} onComplete={() => handlePoseSessionComplete(sessionExercise)}
+            onClose={() => { setSessionExercise(null); setSelectedExercise(null); }}
           />
         )}
       </AnimatePresence>

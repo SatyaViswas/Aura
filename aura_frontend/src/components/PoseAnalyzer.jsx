@@ -180,10 +180,10 @@ const PoseAnalyzer = ({
   targetReps = null,
   estimatedXp = 20,
   onComplete,
+  onClose,
 }) => {
   // ── Store access ────────────────────────────────────────────────────────────
   const uid = useHealthStore((state) => state.user?.uid ?? 'anonymous');
-  const completeWorkout = useHealthStore((state) => state.completeWorkout);
 
   // ── DOM refs ────────────────────────────────────────────────────────────────
   const videoRef = useRef(null);   // <video> element
@@ -566,13 +566,20 @@ const PoseAnalyzer = ({
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleEndSession = useCallback(() => {
-    setSessionDone(true);
     teardown();
-    completeWorkout();
+    if (sessionDone && typeof onComplete === 'function') {
+      onComplete();
+    } else if (typeof onClose === 'function') {
+      onClose();
+    }
+  }, [teardown, sessionDone, onComplete, onClose]);
+
+  const handleLogAndComplete = useCallback(() => {
+    teardown();
     if (typeof onComplete === 'function') {
       onComplete();
     }
-  }, [teardown, completeWorkout, onComplete]);
+  }, [teardown, onComplete]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Derived UI helpers
@@ -647,11 +654,11 @@ const PoseAnalyzer = ({
           {/* End session — icon-only on mobile */}
           <button
             onClick={handleEndSession}
-            title="End Session"
+            title={sessionDone ? 'Finish Session' : 'Abort Session'}
             className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium text-text-secondary bg-background border border-border hover:bg-[#DCE4E0] hover:text-[#4A6B5D] hover:border-[#4A6B5D]/20 transition-all shadow-sm"
           >
-            <X className="w-4 h-4" />
-            <span className="hidden sm:inline">End Session</span>
+            {sessionDone ? <CheckCircle2 className="w-4 h-4 text-[#4A6B5D]" /> : <X className="w-4 h-4" />}
+            <span className="hidden sm:inline">{sessionDone ? 'Done' : 'Abort'}</span>
           </button>
         </div>
       </header>
@@ -964,13 +971,23 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── End session CTA ─────────────────────────────────────────── */}
-          <button
-            onClick={handleEndSession}
-            className="w-full py-4 rounded-[1rem] bg-[#4A6B5D] text-white font-medium tracking-wide text-sm hover:bg-[#3d5a4d] hover:scale-[1.02] active:scale-[0.99] transition-all shadow-[0_8px_24px_-6px_rgba(74,107,93,0.40)] flex items-center justify-center gap-2.5 mb-2"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Complete &amp; Log Session
-          </button>
+          {sessionDone ? (
+            <button
+              onClick={handleLogAndComplete}
+              className="w-full py-4 rounded-[1rem] bg-[#4A6B5D] text-white font-medium tracking-wide text-sm hover:bg-[#3d5a4d] hover:scale-[1.02] active:scale-[0.99] transition-all shadow-[0_8px_24px_-6px_rgba(74,107,93,0.40)] flex items-center justify-center gap-2.5 mb-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Log &amp; Complete Set
+            </button>
+          ) : (
+            <button
+              onClick={handleEndSession}
+              className="w-full py-4 rounded-[1rem] bg-background text-text-secondary border border-border font-medium tracking-wide text-sm hover:bg-[#DCE4E0] hover:text-[#4A6B5D] transition-all flex items-center justify-center gap-2.5 mb-2"
+            >
+              <X className="w-4 h-4" />
+              Abort Session
+            </button>
+          )}
         </aside>
       </div>
     </div>

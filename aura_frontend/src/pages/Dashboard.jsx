@@ -1,13 +1,59 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import useHealthStore from '../store/healthStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Trophy } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  const dateObj = new Date(y, m - 1, d);
+  return dateObj.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getStatusDetails = (status) => {
+  switch (status) {
+    case 'full':
+      return {
+        label: 'Complete',
+        color: 'text-[#4A6B5D] dark:text-[#6D8C7E]',
+        bg: 'bg-[#4A6B5D] dark:bg-[#6D8C7E]',
+      };
+    case 'partial':
+      return {
+        label: 'Partial',
+        color: 'text-amber-600 dark:text-amber-400',
+        bg: 'bg-amber-500',
+      };
+    default:
+      return {
+        label: 'Rest',
+        color: 'text-[#767676] dark:text-[#A3A3A3]',
+        bg: 'bg-[#DCE4E0] dark:bg-[#2E3A35] border border-black/5 dark:border-white/10',
+      };
+  }
+};
 
 const Dashboard = () => {
   const user = useHealthStore((state) => state.user);
   const dailyGoals = useHealthStore((state) => state.dailyGoals);
   const history = useHealthStore((state) => state.history);
+
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setSelectedDate(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   // 1. Real-Time Performance & Metric Calculations
   const getClampedPercentage = (logged, target) =>
@@ -36,9 +82,18 @@ const Dashboard = () => {
   // 35-DAY CONSISTENCY GRID: Initialize cycle, manage reset, and build chronological map
   // ──────────────────────────────────────────────────────────────────────────────
   const past35Days = useMemo(() => {
+    const getLocalDateString = (d = new Date()) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const parseLocalDateString = (dateStr) => {
+      const [y, m, d] = dateStr.split('-');
+      return new Date(y, m - 1, d);
+    };
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayString = today.toISOString().split('T')[0];
+    const todayString = getLocalDateString(today);
 
     // Initialize consistency cycle if not present
     if (!localStorage.getItem('consistencyCycleStartDate')) {
@@ -46,7 +101,7 @@ const Dashboard = () => {
     }
 
     let cycleStartDateStr = localStorage.getItem('consistencyCycleStartDate');
-    let cycleStartDate = new Date(cycleStartDateStr);
+    let cycleStartDate = parseLocalDateString(cycleStartDateStr);
     cycleStartDate.setHours(0, 0, 0, 0);
 
     let daysSinceCycleStart = Math.floor((today - cycleStartDate) / (1000 * 60 * 60 * 24));
@@ -55,7 +110,7 @@ const Dashboard = () => {
     if (daysSinceCycleStart >= 35 || daysSinceCycleStart < 0) {
       localStorage.setItem('consistencyCycleStartDate', todayString);
       cycleStartDateStr = todayString;
-      cycleStartDate = new Date(todayString);
+      cycleStartDate = new Date(today);
       cycleStartDate.setHours(0, 0, 0, 0);
       daysSinceCycleStart = 0;
     }
@@ -145,10 +200,17 @@ const Dashboard = () => {
     for (let i = 0; i < 35; i++) {
       const d = new Date(cycleStartDate);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(d);
 
-      const initialEntry = { date: dateStr, status: 'none' };
+      // Always populate date with at least 'empty' so it never disappears
+      const initialEntry = { date: dateStr, status: 'empty' };
       const updatedEntry = evaluateConsistencyStatus(initialEntry, todayString);
+      
+      // If evaluateConsistencyStatus sets it to 'none', keep it as 'empty' placeholder
+      if (updatedEntry.status === 'none') {
+        updatedEntry.status = 'empty';
+      }
+      
       days.push(updatedEntry);
     }
 
@@ -297,18 +359,50 @@ const Dashboard = () => {
           </div>
 
           <div className="flex-1 flex flex-row items-center justify-center">
-            <div className="grid grid-cols-7 grid-flow-row gap-3">
+            <div className="grid grid-cols-7 grid-flow-row gap-2 md:gap-3 justify-items-center">
               {past35Days.map((day, idx) => (
-                <div
-                  key={idx}
-                  className={`w-8 h-8 md:w-10 md:h-10 rounded-md transition-all duration-300 ${day.status === 'full'
-                    ? 'bg-[#4A6B5D] dark:bg-[#6D8C7E] shadow-[0_0_12px_rgba(74,107,93,0.3)] scale-105'
-                    : day.status === 'partial'
-                      ? 'bg-[#DCE4E0] dark:bg-[#2E3A35]'
-                      : 'bg-[#FBFBF9] dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5'
+                <div key={idx} className="relative">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDate(selectedDate?.date === day.date ? null : day);
+                    }}
+                    className={`w-7 h-7 md:w-10 md:h-10 rounded-md transition-all duration-300 cursor-pointer ${
+                      day.status === 'full'
+                        ? 'bg-[#4A6B5D] dark:bg-[#6D8C7E] shadow-[0_0_12px_rgba(74,107,93,0.3)] hover:scale-110 active:scale-95'
+                        : day.status === 'partial'
+                        ? 'bg-[#DCE4E0] dark:bg-[#2E3A35] hover:scale-105 active:scale-95'
+                        : 'bg-[#FBFBF9] dark:bg-[#1A1A1A] border border-black/5 dark:border-white/5 hover:scale-105 active:scale-95'
+                    } ${
+                      selectedDate?.date === day.date
+                        ? 'ring-2 ring-[#4A6B5D] dark:ring-[#6D8C7E] scale-105 shadow-[0_0_15px_rgba(74,107,93,0.4)] dark:shadow-[0_0_15px_rgba(109,140,126,0.4)]'
+                        : ''
                     }`}
-                  title={day.date}
-                />
+                  />
+
+                  <AnimatePresence>
+                    {selectedDate?.date === day.date && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-30 w-36 bg-white/95 dark:bg-[#2A2A2A]/95 backdrop-blur-md border border-black/[0.08] dark:border-white/[0.1] p-2.5 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_24px_rgba(0,0,0,0.35)] pointer-events-none flex flex-col gap-0.5 items-center text-center"
+                      >
+                        <span className="text-[10px] font-semibold tracking-wider text-[#767676] dark:text-[#A3A3A3] uppercase">
+                          {formatDateLabel(day.date)}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${getStatusDetails(day.status).bg}`} />
+                          <span className={`text-[12px] font-medium ${getStatusDetails(day.status).color}`}>
+                            {getStatusDetails(day.status).label}
+                          </span>
+                        </div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white/95 dark:border-t-[#2A2A2A]/95" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ))}
             </div>
           </div>
