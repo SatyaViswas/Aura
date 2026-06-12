@@ -57,9 +57,6 @@ const WASM_BASE_URL =
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
-/** FastAPI WebSocket base. */
-const WS_BASE = `${WEBSOCKET_URL}/ws/${exerciseId}?user_id=${user.uid}`;
-
 /** Canvas overlay colours matching Scandi-minimalist palette. */
 const LANDMARK_COLOR = '#4A6B5D'; // sage green
 const CONNECTOR_COLOR = 'rgba(74,107,93,0.45)';
@@ -311,7 +308,8 @@ const PoseAnalyzer = ({
     setGradientStatus(WS_STATUS.CONNECTING);
     setWsError(null);
 
-    const url = `${WS_BASE}/${exerciseId}?user_id=${uid}`;
+    // Safely construct the URL within scope
+    const url = `${WEBSOCKET_URL}/ws/${exerciseId}?user_id=${uid}`;
     const ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -322,7 +320,7 @@ const PoseAnalyzer = ({
     ws.onerror = () => {
       setGradientStatus(WS_STATUS.ERROR);
       setWsError(
-        `WebSocket connection to ${url} failed. Ensure the FastAPI backend is running on port 8000.`
+        `WebSocket connection to ${url} failed. Ensure the FastAPI backend is running and reachable.`
       );
     };
 
@@ -952,7 +950,7 @@ const PoseAnalyzer = ({
             <div className="bg-background rounded-[0.875rem] p-4 border border-border font-mono text-[11px] space-y-2">
               <p className="text-text-secondary break-all">
                 <span className="text-[#4A6B5D] font-semibold">WS</span>{' '}
-                {WS_BASE}/{exerciseId}?user_id={uid}
+                {WEBSOCKET_URL}/ws/{exerciseId}?user_id={uid}
               </p>
               <p className="text-text-secondary">
                 <span className="font-semibold text-text-primary">Payload</span>{' '}
