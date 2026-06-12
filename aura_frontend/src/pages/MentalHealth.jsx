@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X } from 'lucide-react';
+import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X, Volume2, MoreHorizontal } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { BACKEND_URL } from '../config/api';
 
@@ -846,73 +846,143 @@ const MentalHealth = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-neutral-950/85 backdrop-blur-xl"
           >
             {/* Header placeholder */}
             <div className="w-full p-8 flex justify-center">
-              <span className="text-white/50 text-sm font-light tracking-widest uppercase">Nivi Voice Interface</span>
+              <span className="text-white/40 text-xs font-light tracking-[0.2em] uppercase">Nivi Quantum Interface</span>
             </div>
 
-            {/* Fluid Morphing Circle */}
-            <div className="flex-1 flex items-center justify-center relative w-full">
+            {/* Quantum Aura Orb */}
+            <div className="flex-1 flex flex-col items-center justify-center relative w-full">
+              
               <motion.button
                 onClick={handleCircleTap}
+                className="relative group outline-none flex items-center justify-center cursor-pointer"
+                style={{ width: '320px', height: '320px' }}
                 animate={{
-                  borderRadius: [
-                    "42% 58% 70% 30% / 45% 45% 55% 55%",
-                    "55% 45% 30% 70% / 60% 30% 70% 40%",
-                    "70% 30% 50% 50% / 30% 70% 50% 50%",
-                    "45% 55% 40% 60% / 55% 45% 60% 40%",
-                    "42% 58% 70% 30% / 45% 45% 55% 55%"
-                  ],
-                  scale: aiSpeaking ? [1, 1.3, 1] : micListening ? [1, 1.05, 1] : aiProcessing ? [0.9, 0.95, 0.9] : 1,
-                  rotate: aiProcessing ? 360 : 0
+                  scale: aiSpeaking ? [1, 1.15, 1] : micListening ? [1, 1.08, 1] : aiProcessing ? 0.9 : [1, 1.02, 1]
                 }}
                 transition={{
-                  borderRadius: { duration: 8, repeat: Infinity, ease: "linear" },
-                  scale: {
-                    duration: aiSpeaking ? 0.4 : micListening ? 3 : aiProcessing ? 2 : 1,
+                  duration: aiSpeaking ? 0.6 : micListening ? 0.4 : aiProcessing ? 2 : 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                {/* Layer 3: Atmospheric Glow Ring */}
+                <motion.div 
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  animate={{
+                    scale: aiSpeaking ? [1, 1.4, 1] : micListening ? [1, 1.15, 1] : aiProcessing ? [0.8, 0.9, 0.8] : [1, 1.05, 1],
+                    opacity: aiSpeaking ? 0.5 : micListening ? 0.4 : aiProcessing ? 0.2 : 0.15,
+                    background: aiSpeaking ? 'radial-gradient(circle, rgba(167,243,208,0.5) 0%, rgba(74,107,93,0) 70%)' 
+                      : micListening ? 'radial-gradient(circle, rgba(94,234,212,0.4) 0%, rgba(20,184,166,0) 70%)'
+                      : aiProcessing ? 'radial-gradient(circle, rgba(209,213,219,0.3) 0%, rgba(156,163,175,0) 70%)'
+                      : 'radial-gradient(circle, rgba(74,107,93,0.3) 0%, rgba(0,0,0,0) 70%)'
+                  }}
+                  transition={{
+                    duration: aiSpeaking ? 1 : micListening ? 2 : aiProcessing ? 3 : 4,
                     repeat: Infinity,
                     ease: "easeInOut"
-                  },
-                  rotate: { duration: 10, repeat: Infinity, ease: "linear" }
-                }}
-                className={`w-64 h-64 shadow-[0_0_80px_rgba(74,107,93,0.6)] border-none outline-none focus:outline-none flex items-center justify-center relative cursor-pointer ${aiSpeaking ? 'bg-primary' : micListening ? 'bg-[#DCE4E0]' : 'bg-primary/50'}`}
-              >
-                {/* Status Text Overlay moved inside button */}
-                <div className="absolute flex flex-col items-center pointer-events-none">
-                  <span className={`text-sm font-medium tracking-widest uppercase ${aiSpeaking ? 'text-white' : micListening ? 'text-primary' : 'text-white/80'}`}>
-                    {aiSpeaking ? "Tap to Interrupt" : aiProcessing ? "Thinking" : micListening ? "Listening" : "Tap Circle to Speak"}
-                  </span>
+                  }}
+                />
+
+                {/* Layer 2: Fluid Energy Mesh Base */}
+                <motion.div
+                  animate={{
+                    rotate: aiProcessing ? 360 : 0,
+                    borderRadius: [
+                      "42% 58% 70% 30% / 45% 45% 55% 55%",
+                      "55% 45% 30% 70% / 60% 30% 70% 40%",
+                      "70% 30% 50% 50% / 30% 70% 50% 50%",
+                      "45% 55% 40% 60% / 55% 45% 60% 40%",
+                      "42% 58% 70% 30% / 45% 45% 55% 55%"
+                    ],
+                  }}
+                  transition={{
+                    rotate: { duration: aiProcessing ? 2 : 10, repeat: Infinity, ease: "linear" },
+                    borderRadius: { duration: 8, repeat: Infinity, ease: "linear" }
+                  }}
+                  className={`absolute inset-8 mix-blend-screen blur-xl opacity-80 transition-colors duration-700 ${
+                    aiSpeaking ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-cyan-400'
+                    : micListening ? 'bg-gradient-to-br from-teal-400 to-emerald-200'
+                    : aiProcessing ? 'bg-gradient-to-t from-gray-300 via-slate-400 to-gray-500'
+                    : 'bg-gradient-to-tr from-[#4A6B5D] to-gray-400'
+                  }`}
+                />
+
+                {/* Layer 2: Fluid Energy Mesh Highlight */}
+                <motion.div
+                  animate={{
+                    rotate: aiProcessing ? -360 : 0,
+                    borderRadius: [
+                      "50% 50% 50% 50% / 50% 50% 50% 50%",
+                      "60% 40% 60% 40% / 40% 60% 40% 60%",
+                      "50% 50% 50% 50% / 50% 50% 50% 50%"
+                    ]
+                  }}
+                  transition={{
+                    rotate: { duration: aiProcessing ? 3 : 12, repeat: Infinity, ease: "linear" },
+                    borderRadius: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                  className={`absolute inset-12 mix-blend-plus-lighter blur-xl opacity-60 transition-colors duration-700 ${
+                    aiSpeaking ? 'bg-gradient-to-bl from-teal-300 to-emerald-500'
+                    : micListening ? 'bg-gradient-to-tl from-emerald-300 to-teal-400'
+                    : aiProcessing ? 'bg-gradient-to-b from-slate-200 to-gray-400'
+                    : 'bg-gradient-to-bl from-[#4A6B5D]/50 to-white/30'
+                  }`}
+                />
+
+                {/* Layer 1: Core Dot */}
+                <div className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center backdrop-blur-md shadow-[inset_0_0_20px_rgba(255,255,255,0.2)] border border-white/20 transition-colors duration-500 ${
+                    aiSpeaking ? 'bg-white/20' : micListening ? 'bg-white/10' : aiProcessing ? 'bg-white/5' : 'bg-[#4A6B5D]/30'
+                }`}>
+                   {aiSpeaking ? <Volume2 className="w-8 h-8 text-white" /> : micListening ? <Mic className="w-8 h-8 text-white" /> : aiProcessing ? <MoreHorizontal className="w-8 h-8 text-white/80 animate-pulse" /> : <div className="w-4 h-4 bg-white/60 rounded-full" />}
                 </div>
+
               </motion.button>
+
+              {/* Status Text Below Orb */}
+              <div className="mt-12 flex flex-col items-center">
+                <span className={`text-[11px] font-medium tracking-[0.3em] uppercase ${aiSpeaking ? 'text-white' : micListening ? 'text-emerald-400' : 'text-white/50'}`}>
+                  {aiSpeaking ? "Tap to Interrupt" : aiProcessing ? "Computing" : micListening ? "Listening..." : "Tap Orb to Speak"}
+                </span>
+              </div>
             </div>
 
             {/* Overlay Control Deck */}
-            <div className="w-full pb-12 pt-6 flex flex-col items-center gap-8 bg-gradient-to-t from-black to-transparent">
-              {/* Voice Toggle Switch */}
-              <div className="flex items-center bg-white/10 rounded-full p-1 backdrop-blur-sm">
+            <div className="w-full pb-12 pt-6 flex flex-col items-center gap-10">
+              {/* Floating Pill Voice Selector */}
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1.5 backdrop-blur-md shadow-2xl relative">
+                {/* Active Slider Background */}
+                <motion.div
+                  className="absolute top-1.5 bottom-1.5 w-[80px] bg-white rounded-full shadow-sm"
+                  initial={false}
+                  animate={{ x: voiceGender === 'female' ? 0 : 80 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+                
                 <button
                   onClick={() => setVoiceGender('female')}
-                  className={`px-6 py-2 rounded-full text-xs font-medium transition-all ${voiceGender === 'female' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                  className={`relative z-10 w-[80px] py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 ${voiceGender === 'female' ? 'text-black' : 'text-white/60 hover:text-white'}`}
                 >
                   Female
                 </button>
                 <button
                   onClick={() => setVoiceGender('male')}
-                  className={`px-6 py-2 rounded-full text-xs font-medium transition-all ${voiceGender === 'male' ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                  className={`relative z-10 w-[80px] py-2 rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 ${voiceGender === 'male' ? 'text-black' : 'text-white/60 hover:text-white'}`}
                 >
                   Male
                 </button>
               </div>
 
-              {/* Exit Button */}
+              {/* Minimalist Exit Button */}
               <button
                 onClick={toggleVoiceMode}
-                className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/50 flex items-center justify-center transition-all shadow-[0_0_30px_rgba(239,68,68,0.2)] hover:shadow-[0_0_40px_rgba(239,68,68,0.6)] hover:scale-105"
+                className="w-14 h-14 rounded-full bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all backdrop-blur-md hover:scale-105"
                 title="Exit Voice Mode"
               >
-                <X className="w-8 h-8" />
+                <X className="w-6 h-6 stroke-[1.5]" />
               </button>
             </div>
           </motion.div>
