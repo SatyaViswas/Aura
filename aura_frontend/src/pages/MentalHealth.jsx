@@ -59,7 +59,9 @@ const MentalHealth = () => {
   const recognitionRef = useRef(null);
   const handleSendMessageRef = useRef();
   const isVoiceModeActiveRef = useRef(isVoiceModeActive);
-  const audioPlayerRef = useRef(new Audio());
+  const playerA = useRef(new Audio());
+  const playerB = useRef(new Audio());
+  const activePlayerRef = useRef('A');
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
 
@@ -212,18 +214,32 @@ const MentalHealth = () => {
     setAiSpeaking(true);
     const nextUrl = audioQueueRef.current.shift();
 
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.src = nextUrl;
-      audioPlayerRef.current.onended = () => playNextInQueue();
-      try {
-        await audioPlayerRef.current.play();
-      } catch (e) {
-        if (e.name === 'AbortError') {
-          // Silently catch AbortError when play is interrupted
-        } else {
-          console.warn("Neural audio streaming playback failure:", e);
-          playNextInQueue();
-        }
+    const currentPlayer = activePlayerRef.current === 'A' ? playerA.current : playerB.current;
+
+    if (!currentPlayer.src.includes(nextUrl)) {
+      currentPlayer.src = nextUrl;
+    }
+
+    currentPlayer.onended = () => {
+      activePlayerRef.current = activePlayerRef.current === 'A' ? 'B' : 'A';
+      playNextInQueue();
+    };
+
+    if (audioQueueRef.current.length > 0) {
+      const otherPlayer = activePlayerRef.current === 'A' ? playerB.current : playerA.current;
+      otherPlayer.src = audioQueueRef.current[0];
+      otherPlayer.load();
+    }
+
+    try {
+      await currentPlayer.play();
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        // Silently catch AbortError
+      } else {
+        console.warn("Neural audio streaming playback failure:", e);
+        activePlayerRef.current = activePlayerRef.current === 'A' ? 'B' : 'A';
+        playNextInQueue();
       }
     }
   };
@@ -237,22 +253,20 @@ const MentalHealth = () => {
     const encodedText = encodeURIComponent(sanitizedText);
     const streamUrl = `${BACKEND_URL}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
 
-    const audioObj = new Audio(streamUrl);
-    audioObj.preload = "auto";
-    audioObj.load();
-
     audioQueueRef.current.push(streamUrl);
     if (!isPlayingRef.current) {
       playNextInQueue();
+    } else if (audioQueueRef.current.length === 1) {
+      const otherPlayer = activePlayerRef.current === 'A' ? playerB.current : playerA.current;
+      otherPlayer.src = streamUrl;
+      otherPlayer.load();
     }
   };
 
   const speakResponse = (textToSpeak) => {
     audioQueueRef.current = [];
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.src = "";
-    }
+    try { playerA.current.pause(); playerA.current.src = ""; } catch (e) {}
+    try { playerB.current.pause(); playerB.current.src = ""; } catch (e) {}
     isPlayingRef.current = false;
     enqueueAudio(textToSpeak);
   };
@@ -271,10 +285,8 @@ const MentalHealth = () => {
     if (aiSpeaking) {
       // Barge-in
       audioQueueRef.current = [];
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current.src = "";
-      }
+      try { playerA.current.pause(); playerA.current.src = ""; } catch (e) {}
+      try { playerB.current.pause(); playerB.current.src = ""; } catch (e) {}
       setAiSpeaking(false);
       isPlayingRef.current = false;
       startListeningGracefully();
@@ -288,10 +300,10 @@ const MentalHealth = () => {
     const nextState = !isVoiceModeActive;
     setIsVoiceModeActive(nextState);
     if (nextState) {
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = "data:audio/mp3;base64,/";
-        audioPlayerRef.current.play().catch(() => {});
-      }
+      playerA.current.src = "data:audio/mp3;base64,/";
+      playerA.current.play().catch(() => {});
+      playerB.current.src = "data:audio/mp3;base64,/";
+      playerB.current.play().catch(() => {});
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!recognitionRef.current && SpeechRecognition) {
@@ -313,10 +325,8 @@ const MentalHealth = () => {
     } else {
       // 4. CLEANUP ON CLOSING VOICE OVERLAY
       audioQueueRef.current = [];
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current.src = "";
-      }
+      try { playerA.current.pause(); playerA.current.src = ""; } catch (e) {}
+      try { playerB.current.pause(); playerB.current.src = ""; } catch (e) {}
       isPlayingRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
@@ -330,10 +340,8 @@ const MentalHealth = () => {
   useEffect(() => {
     return () => {
       audioQueueRef.current = [];
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current.src = "";
-      }
+      try { playerA.current.pause(); playerA.current.src = ""; } catch (e) {}
+      try { playerB.current.pause(); playerB.current.src = ""; } catch (e) {}
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
       }
@@ -409,10 +417,8 @@ const MentalHealth = () => {
 
       if (isVoiceModeActive) {
         audioQueueRef.current = [];
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.pause();
-          audioPlayerRef.current.src = "";
-        }
+        try { playerA.current.pause(); playerA.current.src = ""; } catch (e) {}
+        try { playerB.current.pause(); playerB.current.src = ""; } catch (e) {}
         isPlayingRef.current = false;
       }
 
@@ -431,12 +437,20 @@ const MentalHealth = () => {
         ));
 
         if (isVoiceModeActive) {
-          let splitMatch;
-          while ((splitMatch = sentenceBuffer.match(/([.!?])\s/)) && sentenceBuffer.length > 50) {
-            const splitIndex = splitMatch.index + 1;
-            const readyText = sentenceBuffer.slice(0, splitIndex).trim();
-            if (readyText) enqueueAudio(readyText);
-            sentenceBuffer = sentenceBuffer.slice(splitIndex).trim();
+          if (sentenceBuffer.length >= 130) {
+            const lastBoundary = Math.max(
+              sentenceBuffer.lastIndexOf('. '),
+              sentenceBuffer.lastIndexOf('! '),
+              sentenceBuffer.lastIndexOf('? '),
+              sentenceBuffer.lastIndexOf('\n')
+            );
+            
+            if (lastBoundary !== -1) {
+              const splitIndex = lastBoundary + 1;
+              const readyText = sentenceBuffer.slice(0, splitIndex).trim();
+              if (readyText) enqueueAudio(readyText);
+              sentenceBuffer = sentenceBuffer.slice(splitIndex).trim();
+            }
           }
         }
       }
