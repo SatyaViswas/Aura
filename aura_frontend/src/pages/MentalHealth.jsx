@@ -25,6 +25,7 @@ const MentalHealth = () => {
   );
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Keep track of latest messages in a ref for safe use in non-dependent sync effect
@@ -58,7 +59,7 @@ const MentalHealth = () => {
   const recognitionRef = useRef(null);
   const handleSendMessageRef = useRef();
   const isVoiceModeActiveRef = useRef(isVoiceModeActive);
-  const webAudioRef = useRef(new Audio());
+  const voiceAgentRef = useRef(null);
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
 
@@ -117,6 +118,8 @@ const MentalHealth = () => {
 
   // Save today's chat changes back to the store
   useEffect(() => {
+    if (isStreaming) return; // Do not save during active stream
+    
     // Only dispatch save operations if the messages array actually contains new updates 
     // compared to our current global state value
     const isLocalDifferent = JSON.stringify(messages) !== JSON.stringify(dailyGoals.mentalChat);
@@ -124,7 +127,7 @@ const MentalHealth = () => {
     if (isLocalDifferent && (messages.length > 1 || messages[0]?.id !== 1)) {
       saveMentalChat(messages);
     }
-  }, [messages, saveMentalChat, dailyGoals.mentalChat]);
+  }, [messages, saveMentalChat, dailyGoals.mentalChat, isStreaming]);
 
   // Scroll to bottom when displayed messages change
   useEffect(() => {
@@ -203,19 +206,20 @@ const MentalHealth = () => {
 
     isPlayingRef.current = true;
     setAiSpeaking(true);
-    const nextAudioObj = audioQueueRef.current.shift();
+    const nextUrl = audioQueueRef.current.shift();
 
-    webAudioRef.current = nextAudioObj;
-
-    nextAudioObj.onended = () => {
-      playNextInQueue();
-    };
-
-    try {
-      await nextAudioObj.play();
-    } catch (e) {
-      console.warn("Neural audio streaming playback failure:", e);
-      playNextInQueue();
+    if (voiceAgentRef.current) {
+      voiceAgentRef.current.src = nextUrl;
+      try {
+        await voiceAgentRef.current.play();
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          // Silently catch AbortError when play is interrupted
+        } else {
+          console.warn("Neural audio streaming playback failure:", e);
+          playNextInQueue();
+        }
+      }
     }
   };
 
@@ -228,26 +232,17 @@ const MentalHealth = () => {
     const encodedText = encodeURIComponent(sanitizedText);
     const streamUrl = `${BACKEND_URL}/api/tts?text=${encodedText}&gender=${voiceGender}&t=${Date.now()}`;
 
-    // Create and preload the audio object immediately to fetch the stream in the background
-    const audioObj = new Audio(streamUrl);
-    audioObj.preload = "auto";
-    audioObj.load();
-
-    audioQueueRef.current.push(audioObj);
+    audioQueueRef.current.push(streamUrl);
     if (!isPlayingRef.current) {
       playNextInQueue();
     }
   };
 
   const speakResponse = (textToSpeak) => {
-    audioQueueRef.current.forEach(obj => {
-      obj.pause();
-      obj.src = "";
-    });
     audioQueueRef.current = [];
-    if (webAudioRef.current) {
-      webAudioRef.current.pause();
-      webAudioRef.current.src = "";
+    if (voiceAgentRef.current) {
+      voiceAgentRef.current.pause();
+      voiceAgentRef.current.src = "";
     }
     isPlayingRef.current = false;
     enqueueAudio(textToSpeak);
@@ -257,6 +252,15 @@ const MentalHealth = () => {
     const nextState = !isVoiceModeActive;
     setIsVoiceModeActive(nextState);
     if (nextState) {
+      if (voiceAgentRef.current) {
+        voiceAgentRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+        voiceAgentRef.current.play().then(() => {
+          voiceAgentRef.current.pause();
+        }).catch(e => {
+          if (e.name !== 'AbortError') console.warn("Audio unlock failed:", e);
+        });
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!recognitionRef.current && SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
@@ -268,14 +272,10 @@ const MentalHealth = () => {
 
         // 3. Cross-Browser Mic Interruption (Barge-In)
         recognitionRef.current.onsoundstart = () => {
-          if (webAudioRef.current && (!webAudioRef.current.paused || audioQueueRef.current.length > 0)) {
-            audioQueueRef.current.forEach(obj => {
-              obj.pause();
-              obj.src = "";
-            });
+          if (voiceAgentRef.current && (!voiceAgentRef.current.paused || audioQueueRef.current.length > 0)) {
             audioQueueRef.current = [];
-            webAudioRef.current.pause();
-            webAudioRef.current.src = "";
+            voiceAgentRef.current.pause();
+            voiceAgentRef.current.src = "";
             setAiSpeaking(false);
             setMicListening(true);
             isPlayingRef.current = false;
@@ -292,14 +292,10 @@ const MentalHealth = () => {
       speakResponse("Hello, I am here. How are your mind and body feeling?");
     } else {
       // 4. CLEANUP ON CLOSING VOICE OVERLAY
-      audioQueueRef.current.forEach(obj => {
-        obj.pause();
-        obj.src = "";
-      });
       audioQueueRef.current = [];
-      if (webAudioRef.current) {
-        webAudioRef.current.pause();
-        webAudioRef.current.src = "";
+      if (voiceAgentRef.current) {
+        voiceAgentRef.current.pause();
+        voiceAgentRef.current.src = "";
       }
       isPlayingRef.current = false;
       if (recognitionRef.current) {
@@ -313,14 +309,10 @@ const MentalHealth = () => {
 
   useEffect(() => {
     return () => {
-      audioQueueRef.current.forEach(obj => {
-        obj.pause();
-        obj.src = "";
-      });
       audioQueueRef.current = [];
-      if (webAudioRef.current) {
-        webAudioRef.current.pause();
-        webAudioRef.current.src = "";
+      if (voiceAgentRef.current) {
+        voiceAgentRef.current.pause();
+        voiceAgentRef.current.src = "";
       }
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
@@ -339,6 +331,7 @@ const MentalHealth = () => {
     setMessages((prev) => [...prev, newUserMsg]);
     if (!forcedText) setInputText('');
     setIsTyping(true);
+    setIsStreaming(true);
     if (isVoiceModeActive) setAiProcessing(true);
 
     try {
@@ -395,14 +388,10 @@ const MentalHealth = () => {
       ]);
 
       if (isVoiceModeActive) {
-        audioQueueRef.current.forEach(obj => {
-          obj.pause();
-          obj.src = "";
-        });
         audioQueueRef.current = [];
-        if (webAudioRef.current) {
-          webAudioRef.current.pause();
-          webAudioRef.current.src = "";
+        if (voiceAgentRef.current) {
+          voiceAgentRef.current.pause();
+          voiceAgentRef.current.src = "";
         }
         isPlayingRef.current = false;
       }
@@ -422,7 +411,7 @@ const MentalHealth = () => {
         ));
 
         if (isVoiceModeActive) {
-          const sentenceRegex = /([^.!?]+[.!?]+)\s*/g;
+          const sentenceRegex = /([^.!?]+[.!?]+)\s+/g;
           let match;
           let lastIndex = 0;
 
@@ -455,6 +444,7 @@ const MentalHealth = () => {
       if (isVoiceModeActive) speakResponse(errorMsg);
     } finally {
       setIsTyping(false);
+      setIsStreaming(false);
       setAiProcessing(false);
     }
   };
@@ -816,6 +806,11 @@ const MentalHealth = () => {
         ref={audioPlayerRef}
         src={audioTracks.find(t => t.id === selectedTrack)?.url}
         loop
+      />
+      <audio
+        ref={voiceAgentRef}
+        className="hidden"
+        onEnded={playNextInQueue}
       />
 
       {/* ── Fluid Voice Mode Overlay ── */}
