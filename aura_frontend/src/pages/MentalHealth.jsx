@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X, Volume2, MoreHorizontal, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X, Volume2, MoreHorizontal, ArrowLeft, MessageCircle, Target } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { BACKEND_URL } from '../config/api';
+import Focus from './Focus';
 
 const MentalHealth = () => {
   const setMentalComplete = useHealthStore((state) => state.setMentalComplete);
@@ -539,7 +540,7 @@ const MentalHealth = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="p-6 md:p-10 lg:p-14 max-w-6xl mx-auto space-y-8"
+      className="p-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-10 lg:p-14 max-w-6xl mx-auto space-y-8"
     >
       <header className="space-y-2">
         <h1 className="text-3xl md:text-4xl font-light text-text-primary tracking-tight">Mind & Body</h1>
@@ -862,16 +863,15 @@ const MentalHealth = () => {
             </button>
           </div>
 
-          {/* Mobile Ava Shortcut Tile */}
-          <div className="z-10 relative mt-8 md:hidden">
-            <button
-              onClick={() => setActiveMobileTab('chat')}
-              className="w-full bg-white/5 border border-white/10 backdrop-blur-md p-4 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-colors shadow-sm"
-            >
-              <span className="text-sm font-medium text-primary">Need to talk? Chat with Ava</span>
-              <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-primary" />
-              </div>
+          {/* Mobile Portals: Chat & Focus */}
+          <div className="md:hidden mt-8 grid grid-cols-2 gap-3 z-10 relative">
+            <button onClick={() => setActiveMobileTab('chat')} className="flex flex-col items-center justify-center gap-2 bg-background border border-border p-4 rounded-2xl hover:bg-surface transition-colors shadow-sm">
+              <MessageCircle className="w-6 h-6 text-primary" />
+              <span className="text-[11px] font-medium text-text-primary tracking-wide">Chat with Ava</span>
+            </button>
+            <button onClick={() => setActiveMobileTab('focus')} className="flex flex-col items-center justify-center gap-2 bg-background border border-border p-4 rounded-2xl hover:bg-surface transition-colors shadow-sm">
+              <Target className="w-6 h-6 text-indigo-500" />
+              <span className="text-[11px] font-medium text-text-primary tracking-wide">Deep Focus Timer</span>
             </button>
           </div>
         </section>
@@ -881,6 +881,28 @@ const MentalHealth = () => {
         src={audioTracks.find(t => t.id === selectedTrack)?.url}
         loop
       />
+
+      {/* Deep Focus Portal Overlay */}
+      <AnimatePresence>
+        {activeMobileTab === 'focus' && (
+          <motion.div
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="md:hidden fixed inset-0 z-[60] bg-neutral-50 dark:bg-[#121614] overflow-y-auto no-scrollbar"
+          >
+            <div className="sticky top-0 z-[70] bg-neutral-50/80 dark:bg-[#121614]/80 backdrop-blur-md px-6 py-4 flex items-center border-b border-neutral-200 dark:border-white/10">
+              <button onClick={() => setActiveMobileTab('breathing')} className="flex items-center text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary transition-colors">
+                ← Back to Mind
+              </button>
+            </div>
+            <div className="pb-[calc(6rem+env(safe-area-inset-bottom))]">
+              <Focus />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Fluid Voice Mode Overlay ── */}
       <AnimatePresence>

@@ -21,6 +21,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PoseLandmarker,
@@ -617,7 +618,7 @@ const PoseAnalyzer = ({
   const isCameraLoading = cameraStatus === 'idle' || cameraStatus === 'loading';
   const isBooting = isModelLoading || isCameraLoading;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
 
       {/* ── Top chrome bar ─────────────────────────────────────────────────── */}
@@ -742,7 +743,7 @@ const PoseAnalyzer = ({
           </AnimatePresence>
 
           {/* Camera feed container */}
-          <div className={`relative w-full h-full overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] transition-all duration-300 ease-out ${isExpanded ? 'fixed inset-0 z-[100] rounded-none border-none' : 'rounded-[1.25rem] sm:rounded-[1.5rem] border border-border'}`}>
+          <div className={`w-full h-full overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] transition-all duration-300 ease-out ${isExpanded ? 'fixed inset-0 z-[100] rounded-none border-none' : 'relative rounded-[1.25rem] sm:rounded-[1.5rem] border border-border'}`}>
             <video
               ref={videoRef}
               autoPlay
@@ -794,7 +795,7 @@ const PoseAnalyzer = ({
                     </div>
 
                     {/* Top Right HUD: Metrics */}
-                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md text-white shadow-xl p-5 rounded-2xl flex flex-col items-end pointer-events-auto mt-[4.5rem] sm:mt-0">
+                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md text-white shadow-xl p-4 sm:p-5 rounded-2xl flex flex-col items-end pointer-events-auto">
                       <p className="text-[10px] uppercase tracking-widest font-semibold opacity-70 mb-1">Repetitions</p>
                       <div className="text-5xl sm:text-6xl font-bold font-mono tracking-tighter leading-none">
                         {reps}
@@ -809,8 +810,8 @@ const PoseAnalyzer = ({
 
                   <div className="flex flex-col items-center gap-4">
                     {/* Bottom HUD: Form Correction Feedback */}
-                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md shadow-xl p-4 px-6 rounded-2xl max-w-sm w-full mx-auto pointer-events-auto">
-                      <p className="text-xl font-semibold text-center text-emerald-400">{feedback}</p>
+                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md shadow-xl p-4 px-5 rounded-2xl max-w-sm w-full mx-auto pointer-events-auto">
+                      <p className="text-lg font-semibold text-center text-emerald-400 leading-tight">{feedback}</p>
                     </div>
 
                     {/* Expanded Touch Targets for Distant Interaction */}
@@ -924,72 +925,71 @@ const PoseAnalyzer = ({
         </div>
 
         {/* ── Right metrics panel ────────────────────────────────────────────── */}
-        <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-3 sm:gap-4">
-
-          {/* ── Rep counter card ─────────────────────────────────────── */}
-          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col items-center gap-3">
-            <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
-              Repetitions
-            </p>
-
-            <motion.div
-              key={reps}
-              initial={{ scale: 1.15, opacity: 0.6 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="text-[4rem] sm:text-[5rem] font-extralight tabular-nums text-text-primary leading-none"
-            >
-              {reps}
-            </motion.div>
-
-            {/* Target indicator */}
-            {parsedTargetReps !== null && (
-              <p className="text-sm text-text-secondary font-light">
-                of{' '}
-                <span className="font-medium text-text-primary">{parsedTargetReps}</span>{' '}
-                target
-              </p>
-            )}
-
-            {/* Rep progress bar */}
-            {repProgress !== null && (
-              <div className="w-full space-y-1.5 mt-1">
-                <div className="w-full h-2 bg-[#DCE4E0] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-[#4A6B5D] rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${repProgress}%` }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
-                  />
-                </div>
-                <p className="text-right text-[10px] text-text-secondary font-medium">
-                  {Math.round(repProgress)}%
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* ── Stage & angle card ───────────────────────────────────── */}
-          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex items-center justify-between gap-4">
-            <div className="flex flex-col items-start gap-1.5">
+        <aside className="w-full lg:w-[340px] shrink-0 flex flex-col gap-3 sm:gap-4 pb-6 lg:pb-0">
+          
+          <div className="flex flex-row lg:flex-col gap-3 sm:gap-4">
+            {/* ── Rep counter card ─────────────────────────────────────── */}
+            <div className="flex-1 bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-4 sm:p-6 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col items-center justify-center gap-2">
               <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
-                Phase
+                Reps
               </p>
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={stage}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.25 }}
-                  className="text-2xl font-light text-text-primary capitalize"
-                >
-                  {stage}
-                </motion.span>
-              </AnimatePresence>
+
+              <motion.div
+                key={reps}
+                initial={{ scale: 1.15, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="text-5xl lg:text-[5rem] font-extralight tabular-nums text-text-primary leading-none"
+              >
+                {reps}
+              </motion.div>
+
+              {/* Target indicator */}
+              {parsedTargetReps !== null && (
+                <p className="text-xs text-text-secondary font-light mt-1">
+                  of <span className="font-medium text-text-primary">{parsedTargetReps}</span>
+                </p>
+              )}
+
+              {/* Rep progress bar */}
+              {repProgress !== null && (
+                <div className="w-full max-w-[120px] space-y-1.5 mt-2 lg:mt-3 hidden lg:block">
+                  <div className="w-full h-1.5 bg-[#DCE4E0] rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-[#4A6B5D] rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${repProgress}%` }}
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <AngleDial angle={angle} />
+            {/* ── Stage & angle card ───────────────────────────────────── */}
+            <div className="flex-1 bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-4 sm:p-6 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4">
+              <div className="flex flex-col items-center lg:items-start gap-1 lg:gap-1.5">
+                <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">
+                  Phase
+                </p>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={stage}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-xl lg:text-2xl font-light text-text-primary capitalize text-center"
+                  >
+                    {stage}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+
+              <div className="scale-[0.85] lg:scale-100 origin-center">
+                <AngleDial angle={angle} />
+              </div>
+            </div>
           </div>
 
           {/* ── XP & exercise info card ─────────────────────────────── */}
@@ -1053,7 +1053,7 @@ const PoseAnalyzer = ({
           </div>
 
           {/* ── WebSocket diagnostic card ─────────────────────────────── */}
-          <div className="bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-4">
+          <div className="hidden lg:block bg-surface rounded-[1.25rem] sm:rounded-[1.5rem] p-5 sm:p-7 shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] border border-border space-y-4">
             <div className="flex items-center gap-2 text-text-secondary">
               <Wifi className="w-4 h-4" />
               <span className="text-xs uppercase tracking-widest font-medium">Stream Target</span>
@@ -1094,7 +1094,8 @@ const PoseAnalyzer = ({
           )}
         </aside>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

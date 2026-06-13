@@ -28,7 +28,6 @@ const Navigation = () => {
   const logout = useHealthStore((state) => state.logout);
 
   const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
 
   const hiddenRoutes = ['/', '/login', '/signup'];
@@ -61,7 +60,6 @@ const Navigation = () => {
         onClick={() => {
           navigate('/settings');
           setIsDesktopMenuOpen(false);
-          setIsMobileMenuOpen(false);
         }}
         className="w-full flex items-center gap-3 p-2 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-surface/5 transition-colors text-sm font-medium"
       >
@@ -73,7 +71,6 @@ const Navigation = () => {
         onClick={() => {
           logout();
           setIsDesktopMenuOpen(false);
-          setIsMobileMenuOpen(false);
         }}
         className="w-full flex items-center gap-3 p-2 rounded-lg text-text-secondary hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm font-medium"
       >
@@ -85,100 +82,36 @@ const Navigation = () => {
 
   return (
     <>
-      {/* ── Mobile Top Navbar ────────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] px-6 flex items-center justify-between z-40 border-b border-border transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsMobileDrawerOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-surface/5 transition-colors"
-            aria-label="Open navigation menu"
+      {/* ── Mobile Floating Bottom Dock ──────────────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-white/90 dark:bg-[#121614]/80 border-t border-neutral-200 dark:border-white/10 backdrop-blur-lg flex justify-between items-center shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        {[
+          { to: '/dashboard', label: 'Home', Icon: Home },
+          { to: '/mental',    label: 'Mind', Icon: Brain },
+          { to: '/workout',   label: 'Train',  Icon: Dumbbell },
+          { to: '/diet',      label: 'Diet', Icon: Flame },
+        ].map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all duration-300 ease-out ${
+                isActive
+                  ? 'text-[#4A6B5D] scale-105'
+                  : 'text-neutral-400 dark:text-white/40 hover:text-neutral-600 dark:hover:text-white/60 hover:scale-105'
+              }`
+            }
           >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-2 text-[#4A6B5D] dark:text-[#6D8C7E]">
-            <Activity className="w-6 h-6" />
-            <span className="text-lg font-semibold tracking-wide">Aura</span>
-          </div>
-        </div>
-      </nav>
-
-      {/* ── Mobile Side Drawer ───────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isMobileDrawerOpen && (
-          <div className="md:hidden fixed inset-0 z-50 flex">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-[#2A2A2A]/20 dark:bg-black/40 backdrop-blur-[2px]"
-              onClick={() => setIsMobileDrawerOpen(false)}
-            />
-            {/* Drawer Body */}
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              className="relative w-72 max-w-[80vw] h-full bg-surface shadow-[20px_0_40px_-10px_rgba(42,42,42,0.1)] dark:shadow-[20px_0_40px_-10px_rgba(0,0,0,0.4)] flex flex-col p-6 border-r border-border"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-2 text-[#4A6B5D] dark:text-[#6D8C7E]">
-                  <Activity className="w-8 h-8" />
-                  <span className="text-xl font-semibold tracking-wide">Aura</span>
+            {({ isActive }) => (
+              <>
+                <div className={`p-1.5 rounded-full transition-colors ${isActive ? 'bg-[#4A6B5D]/10' : ''}`}>
+                  <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
                 </div>
-                <button
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-2 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-surface/5 transition-colors"
-                  aria-label="Close navigation menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Navigation Links */}
-              <ul className="flex flex-col gap-1 overflow-y-auto flex-1">
-                {[
-                  { to: '/dashboard', label: 'Dashboard',  Icon: Home        },
-                  { to: '/diet',      label: 'Nutrition',   Icon: Flame       },
-                  { to: '/focus',     label: 'Deep Work',   Icon: Target      },
-                  { to: '/workout',   label: 'Training',    Icon: Dumbbell    },
-                  { to: '/mental',    label: 'Mind & Body', Icon: Brain       },
-                  { to: '/history',   label: 'History',     Icon: CalendarDays },
-                  { to: '/settings',  label: 'Settings',     Icon: Settings2   },
-                ].map(({ to, label, Icon }) => (
-                  <li key={to}>
-                    <NavLink
-                      to={to}
-                      onClick={() => setIsMobileDrawerOpen(false)}
-                      className={({ isActive }) => navLinkClass(isActive)}
-                    >
-                      <Icon className="w-5 h-5" />
-                      {label}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Footer / Logout */}
-              <div className="pt-6 border-t border-[#E5E7EB] dark:border-white/10 mt-auto">
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMobileDrawerOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg text-text-secondary hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm font-medium"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span>Log Out</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                <span className={`text-[10px] tracking-wide transition-all ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
 
       {/* ── Desktop Side Rail ────────────────────────────────────────────────── */}
       <nav className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-surface shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] p-6 z-40 border-r border-border transition-colors duration-300">

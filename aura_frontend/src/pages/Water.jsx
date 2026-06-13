@@ -3,7 +3,7 @@ import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets, X } from 'lucide-react';
 
-const Water = () => {
+const Water = ({ variant = 'default' }) => {
   const dailyGoals = useHealthStore((state) => state.dailyGoals);
   const addWater = useHealthStore((state) => state.addWater);
   const user = useHealthStore((state) => state.user);
@@ -66,38 +66,73 @@ const Water = () => {
   return (
     <div className="w-full h-full flex justify-center">
       {/* Stage 1: The Minimalist Dashboard Preview Card */}
-      <div 
-        onClick={() => setIsModalOpen(true)}
-        className="w-full h-full bg-white dark:bg-[#262626] border border-black/[0.03] dark:border-white/[0.05] rounded-[1.5rem] p-6 flex flex-row items-center justify-between hover:shadow-[0_15px_40px_-10px_rgba(42,42,42,0.08)] dark:hover:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.3)] shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] transition-all cursor-pointer gap-4"
-      >
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="w-12 h-12 rounded-[1rem] bg-[#DCE4E0] dark:bg-[#2E3A35] flex items-center justify-center shrink-0">
-             <Droplets className="w-6 h-6 text-[#4A6B5D] dark:text-[#6D8C7E]" />
+      {variant === 'compact' ? (
+        <div 
+          onClick={() => setIsModalOpen(true)}
+          className="w-full bg-white/5 dark:bg-white/5 border border-black/[0.03] dark:border-white/10 backdrop-blur-md rounded-[1.25rem] p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer min-h-[140px]"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-full bg-[#DCE4E0] dark:bg-[#2E3A35] flex items-center justify-center shrink-0">
+               <Droplets className="w-5 h-5 text-[#4A6B5D] dark:text-[#6D8C7E]" />
+            </div>
+            <div className="flex items-center justify-center relative w-10 h-10 shrink-0">
+               <svg className="w-10 h-10 transform -rotate-90">
+                  <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="none" className="text-black/[0.05] dark:text-white/10" />
+                  <circle 
+                    cx="20" 
+                    cy="20" 
+                    r="16" 
+                    stroke="currentColor" 
+                    strokeWidth="3" 
+                    fill="none" 
+                    strokeDasharray={2 * Math.PI * 16} 
+                    strokeDashoffset={(2 * Math.PI * 16) - ((progress / 100) * (2 * Math.PI * 16))} 
+                    strokeLinecap="round" 
+                    className="text-[#4A6B5D] dark:text-[#6D8C7E] transition-all duration-700 ease-out"
+                  />
+               </svg>
+               <span className="absolute text-[9px] font-bold text-[#2A2A2A] dark:text-[#FBFBF9]">{Math.round(progress)}%</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-             <span className="text-[#2A2A2A] dark:text-[#FBFBF9] text-base font-medium tracking-wide">Hydration</span>
-             <span className="text-[#767676] dark:text-[#A3A3A3] text-sm mt-0.5 font-light">{waterLogged} / {waterTarget} ml</span>
+          <div className="flex flex-col mt-3">
+             <span className="text-[#2A2A2A] dark:text-[#FBFBF9] text-sm font-semibold tracking-wide">Hydration</span>
+             <span className="text-[#767676] dark:text-[#A3A3A3] text-xs mt-0.5 font-light">{waterLogged} / {waterTarget} ml</span>
           </div>
         </div>
-        <div className="flex items-center justify-center relative w-14 h-14 shrink-0">
-           <svg className="w-14 h-14 transform -rotate-90">
-              <circle cx="28" cy="28" r={radius} stroke="currentColor" strokeWidth="4" fill="none" className="text-black/[0.05] dark:text-white/10" />
-              <circle 
-                cx="28" 
-                cy="28" 
-                r={radius} 
-                stroke="currentColor" 
-                strokeWidth="4" 
-                fill="none" 
-                strokeDasharray={circumference} 
-                strokeDashoffset={strokeDashoffset} 
-                strokeLinecap="round" 
-                className="text-[#4A6B5D] dark:text-[#6D8C7E] transition-all duration-700 ease-out"
-              />
-           </svg>
-           <span className="absolute text-[11px] font-medium text-[#2A2A2A] dark:text-[#FBFBF9]">{Math.round(progress)}%</span>
+      ) : (
+        <div 
+          onClick={() => setIsModalOpen(true)}
+          className="w-full h-full bg-white dark:bg-[#262626] border border-black/[0.03] dark:border-white/[0.05] rounded-[1.5rem] p-6 flex flex-row items-center justify-between hover:shadow-[0_15px_40px_-10px_rgba(42,42,42,0.08)] dark:hover:shadow-[0_15px_40px_-10px_rgba(0,0,0,0.3)] shadow-[0_10px_40px_-10px_rgba(42,42,42,0.04)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] transition-all cursor-pointer gap-4"
+        >
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="w-12 h-12 rounded-[1rem] bg-[#DCE4E0] dark:bg-[#2E3A35] flex items-center justify-center shrink-0">
+               <Droplets className="w-6 h-6 text-[#4A6B5D] dark:text-[#6D8C7E]" />
+            </div>
+            <div className="flex flex-col">
+               <span className="text-[#2A2A2A] dark:text-[#FBFBF9] text-base font-medium tracking-wide">Hydration</span>
+               <span className="text-[#767676] dark:text-[#A3A3A3] text-sm mt-0.5 font-light">{waterLogged} / {waterTarget} ml</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center relative w-14 h-14 shrink-0">
+             <svg className="w-14 h-14 transform -rotate-90">
+                <circle cx="28" cy="28" r={radius} stroke="currentColor" strokeWidth="4" fill="none" className="text-black/[0.05] dark:text-white/10" />
+                <circle 
+                  cx="28" 
+                  cy="28" 
+                  r={radius} 
+                  stroke="currentColor" 
+                  strokeWidth="4" 
+                  fill="none" 
+                  strokeDasharray={circumference} 
+                  strokeDashoffset={strokeDashoffset} 
+                  strokeLinecap="round" 
+                  className="text-[#4A6B5D] dark:text-[#6D8C7E] transition-all duration-700 ease-out"
+                />
+             </svg>
+             <span className="absolute text-[11px] font-medium text-[#2A2A2A] dark:text-[#FBFBF9]">{Math.round(progress)}%</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stage 2: The Immersive Hydro-Kinetic Logging Modal */}
       <AnimatePresence>

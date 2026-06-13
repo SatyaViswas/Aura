@@ -869,7 +869,7 @@ const ExerciseRoster = ({ subSection, onBack, completeWorkoutAction }) => {
               className="relative w-full bg-surface rounded-t-[1.75rem] shadow-[0_-20px_60px_-10px_rgba(42,42,42,0.18)] dark:shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.5)] flex flex-col max-h-[92vh]"
             >
               <div className="w-10 h-1 bg-[#DCE4E0] dark:bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
-              <div className="overflow-y-auto px-5 sm:px-6 pb-safe-or-8 pt-3 flex flex-col gap-5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px) + 16px, 32px)' }}>
+              <div className="overflow-y-auto px-5 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 flex flex-col gap-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
                     <p className="text-[10px] text-text-secondary uppercase tracking-widest font-medium">Exercise Detail</p>
@@ -993,7 +993,7 @@ const Workout = () => {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14 pb-10">
+      <div className="max-w-6xl mx-auto px-5 py-10 md:px-10 md:py-14 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-14">
         <AnimatePresence mode="wait">
           {level === 1 && <ModalityDiscovery key="l1" onSelectModality={handleSelectModality} />}
           {level === 2 && selectedModalityKey && <TrackList key="l2" modalityKey={selectedModalityKey} onBack={handleBack} onSelectTrack={handleSelectTrack} />}

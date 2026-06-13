@@ -425,7 +425,7 @@ const Diet = () => {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="block md:hidden p-4 pb-28 space-y-6"
+        className="block md:hidden p-4 pb-[calc(11rem+env(safe-area-inset-bottom))] space-y-6"
       >
         <header className="space-y-1">
           <h1 className="text-3xl font-light text-text-primary tracking-tight">Nutrition</h1>
@@ -550,7 +550,7 @@ const Diet = () => {
       </motion.div>
 
       {/* Component 3: Bottom Sticky "Ask Ava" AI Drawer */}
-      <div className="block md:hidden fixed bottom-4 left-4 right-4 z-40">
+      <div className="block md:hidden fixed bottom-[calc(6.25rem+env(safe-area-inset-bottom))] left-4 right-4 z-40">
         <div 
           className="border border-border backdrop-blur-xl shadow-2xl rounded-2xl p-3 flex items-center gap-3"
           style={{ backgroundColor: theme === 'dark' ? 'rgba(38, 38, 38, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}
