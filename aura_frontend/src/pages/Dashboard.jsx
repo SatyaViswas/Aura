@@ -3,6 +3,7 @@ import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Trophy } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
+import Water from './Water';
 
 const formatDateLabel = (dateStr) => {
   if (!dateStr) return '';
@@ -303,6 +304,13 @@ const Dashboard = () => {
             Today vs Best Ever
           </span>
         </motion.section>
+      </div>
+
+      {/* Quick Action Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <motion.div variants={itemVariants} className="w-full h-full">
+          <Water />
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">

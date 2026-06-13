@@ -142,7 +142,6 @@ const Navigation = () => {
               <ul className="flex flex-col gap-1 overflow-y-auto flex-1">
                 {[
                   { to: '/dashboard', label: 'Dashboard',  Icon: Home        },
-                  { to: '/water',     label: 'Hydration',   Icon: Droplets    },
                   { to: '/diet',      label: 'Nutrition',   Icon: Flame       },
                   { to: '/focus',     label: 'Deep Work',   Icon: Target      },
                   { to: '/workout',   label: 'Training',    Icon: Dumbbell    },
@@ -191,7 +190,6 @@ const Navigation = () => {
         <ul className="flex flex-col gap-1">
           {[
             { to: '/dashboard', label: 'Dashboard',  Icon: Home        },
-            { to: '/water',     label: 'Hydration',   Icon: Droplets    },
             { to: '/diet',      label: 'Nutrition',   Icon: Flame       },
             { to: '/focus',     label: 'Deep Work',   Icon: Target      },
             { to: '/workout',   label: 'Training',    Icon: Dumbbell    },

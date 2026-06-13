@@ -45,6 +45,7 @@ const initialDailyGoals = {
   streakIncrementedToday: false,
   waterHalfXpAwarded: false,
   waterFullXpAwarded: false,
+  waterStreakIncrementedToday: false,
   mealLogCount: 0,
   dietFullXpAwarded: false,
   focusSessionsXpCount: 0,
@@ -60,6 +61,7 @@ const initialUserState = {
   level: 1,
   xp: 0,
   currentStreak: 0,
+  waterStreak: 0,
   lastActiveDate: null,
   isAuthenticated: false,
   highestDailyXp: 0,
@@ -128,6 +130,9 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
 
     const streakKept = diffDays === 1 && activityDone;
 
+    const waterCompletedYesterday = (updatedGoals.waterLogged || 0) >= (updatedGoals.waterTarget || 3000);
+    const waterStreakKept = diffDays === 1 && waterCompletedYesterday;
+
     updatedHistory.push({
       date: lastDate,
       goals: { ...updatedGoals },
@@ -149,6 +154,7 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
     };
 
     updatedUser.currentStreak = streakKept ? updatedUser.currentStreak : 0;
+    updatedUser.waterStreak = waterStreakKept ? (updatedUser.waterStreak || 0) : 0;
     updatedUser.lastActiveDate = today;
   }
 
@@ -403,6 +409,11 @@ const useHealthStore = create(
 
           if (xpToAward > 0) {
             goalUpdates.dailyXpEarned = (Number(goals.dailyXpEarned) || 0) + xpToAward;
+          }
+
+          if (ratio >= 1 && !goals.waterStreakIncrementedToday) {
+            goalUpdates.waterStreakIncrementedToday = true;
+            userUpdates.waterStreak = (user.waterStreak || 0) + 1;
           }
 
           return applyActivity(state, goalUpdates, userUpdates);

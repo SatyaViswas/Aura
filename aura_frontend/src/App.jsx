@@ -9,7 +9,6 @@ import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
-import Water from './pages/Water';
 import Diet from './pages/Diet';
 import Focus from './pages/Focus';
 import Workout from './pages/Workout';
@@ -57,6 +56,17 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Public Routing Configuration Wrapper
+const PublicRoute = ({ children }) => {
+  const isAuthenticated = useHealthStore((state) => state.user.isAuthenticated);
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -142,13 +152,12 @@ const AppContent = () => {
 
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Welcome />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={<PublicRoute><Welcome /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
           {/* Private Dashboards & Tracking Modules */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/water" element={<ProtectedRoute><Water /></ProtectedRoute>} />
           <Route path="/diet" element={<ProtectedRoute><Diet /></ProtectedRoute>} />
           <Route path="/focus" element={<ProtectedRoute><Focus /></ProtectedRoute>} />
           <Route path="/workout" element={<ProtectedRoute><Workout /></ProtectedRoute>} />
