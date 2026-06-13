@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useHealthStore from '../store/healthStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X, Volume2, MoreHorizontal } from 'lucide-react';
+import { Send, Wind, Music, Calendar, ChevronDown, RotateCcw, Mic, X, Volume2, MoreHorizontal, ArrowLeft, MessageCircle } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { BACKEND_URL } from '../config/api';
 
@@ -11,6 +11,9 @@ const MentalHealth = () => {
   const dailyGoals = useHealthStore((state) => state.dailyGoals);
   const history = useHealthStore((state) => state.history);
 
+  // Mobile Layout State
+  const [activeMobileTab, setActiveMobileTab] = useState('breathing');
+
   // Conversational State and Multi-Turn History
   const [selectedDate, setSelectedDate] = useState('today');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -19,7 +22,7 @@ const MentalHealth = () => {
       {
         id: 1,
         role: 'model',
-        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+        parts: [{ text: "Hello. I'm Ava. Welcome to this quiet space. How are your mind and body feeling right now?" }]
       }
     ]
   );
@@ -37,17 +40,33 @@ const MentalHealth = () => {
   // Compute displayed messages: only display today's live messages if date is 'today',
   // otherwise fetch historical archived logs from the history store.
   const displayedMessages = useMemo(() => {
-    if (selectedDate === 'today') {
-      return messages;
-    }
-    const entry = history.find((e) => e.date === selectedDate);
-    return entry?.goals?.mentalChat || [
-      {
-        id: 1,
-        role: 'model',
-        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+    const rawMessages = (() => {
+      if (selectedDate === 'today') {
+        return messages;
       }
-    ];
+      const entry = history.find((e) => e.date === selectedDate);
+      return entry?.goals?.mentalChat || [
+        {
+          id: 1,
+          role: 'model',
+          parts: [{ text: "Hello. I'm Ava. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+        }
+      ];
+    })();
+
+    // Seamlessly map Nivi to Ava in text content for legacy/saved message logs
+    return rawMessages.map(msg => {
+      if (msg.role === 'model' && msg.parts?.[0]?.text) {
+        return {
+          ...msg,
+          parts: [{
+            ...msg.parts[0],
+            text: msg.parts[0].text.replace(/\bNivi\b/g, 'Ava')
+          }]
+        };
+      }
+      return msg;
+    });
   }, [selectedDate, messages, history]);
 
   // Voice Mode State
@@ -111,7 +130,7 @@ const MentalHealth = () => {
           {
             id: 1,
             role: 'model',
-            parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+            parts: [{ text: "Hello. I'm Ava. Welcome to this quiet space. How are your mind and body feeling right now?" }]
           }
         ]
       );
@@ -186,7 +205,7 @@ const MentalHealth = () => {
       {
         id: 1,
         role: 'model',
-        parts: [{ text: "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now?" }]
+        parts: [{ text: "Hello. I'm Ava. Welcome to this quiet space. How are your mind and body feeling right now?" }]
       }
     ];
     // Wipe local UI state
@@ -369,7 +388,7 @@ const MentalHealth = () => {
 
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
-      const baseSystemInstruction = `You are Nivi, an advanced AI wellness, fitness, and productivity coach built into the Aura platform. You possess the full intelligence, creativity, and capabilities of a world-class AI, but your expertise is strictly focused on mastering these five pillars for the user:
+      const baseSystemInstruction = `You are Ava, a minimalistic, empathetic, and professional health and fitness companion built into the Aura platform. You possess the full intelligence, creativity, and capabilities of a world-class AI, but your expertise is strictly focused on mastering these five pillars for the user:
 
 1. Training: Generate full workout plans, exercise splits, form cues, and fitness advice.
 2. Diet: Create meal plans, calculate macros/calories, and give nutrition advice.
@@ -462,7 +481,7 @@ const MentalHealth = () => {
       setMentalComplete(true);
 
     } catch (error) {
-      console.warn("Nivi Generation Pipeline Exception:", error);
+      console.warn("Ava Generation Pipeline Exception:", error);
       const errorMsg = "I'm currently resting my connection lines. Please take a slow, deep breath, and try again in a moment.";
       setMessages((prev) => [
         ...prev,
@@ -528,15 +547,26 @@ const MentalHealth = () => {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
-        {/* Nivi AI Companion Interface */}
-        <section className="bg-surface rounded-[1.5rem] p-8 shadow-natural flex flex-col min-h-[600px] lg:h-[650px] relative">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-border">
+        {/* Ava AI Companion Interface */}
+        <section className={`bg-surface rounded-[1.5rem] p-8 shadow-natural flex-col min-h-[600px] lg:h-[650px] relative ${activeMobileTab === 'chat' ? 'flex' : 'hidden md:flex'}`}>
+          {/* Mobile Back Header */}
+          <div className="flex md:hidden items-center gap-3 mb-6 pb-4 border-b border-border">
+            <button
+              onClick={() => setActiveMobileTab('breathing')}
+              className="p-2 -ml-2 rounded-xl text-text-secondary hover:bg-background hover:text-text-primary transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-medium text-text-primary">Chat with Ava</h2>
+          </div>
+
+          <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-border">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-alert flex items-center justify-center text-primary font-medium text-lg shadow-inner">
-                N
+                A
               </div>
               <div>
-                <h2 className="text-xl font-medium text-text-primary">Nivi</h2>
+                <h2 className="text-xl font-medium text-text-primary">Ava</h2>
                 <p className="text-sm text-text-secondary">AI Companion</p>
               </div>
             </div>
@@ -691,7 +721,7 @@ const MentalHealth = () => {
         </section>
 
         {/* Dynamic Soundscape Controller & Breathwork Somatic Ring */}
-        <section className="bg-surface rounded-[1.5rem] p-8 md:p-12 shadow-natural flex flex-col justify-between min-h-[600px] lg:h-[650px] relative overflow-hidden">
+        <section className={`bg-surface rounded-[1.5rem] p-8 md:p-12 shadow-natural flex-col justify-between min-h-[600px] lg:h-[650px] relative overflow-hidden ${activeMobileTab === 'breathing' ? 'flex' : 'hidden md:flex'}`}>
           <div className="z-10 relative">
             <h2 className="text-2xl font-light text-text-primary mb-2">Breathwork</h2>
             <p className="text-text-secondary text-[15px] font-light mb-8">Synchronize your breath to the expanding circle to trigger a parasympathetic response.</p>
@@ -831,6 +861,19 @@ const MentalHealth = () => {
               {breathingActive ? 'Stop Session' : 'Begin Breathing'}
             </button>
           </div>
+
+          {/* Mobile Ava Shortcut Tile */}
+          <div className="z-10 relative mt-8 md:hidden">
+            <button
+              onClick={() => setActiveMobileTab('chat')}
+              className="w-full bg-white/5 border border-white/10 backdrop-blur-md p-4 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-colors shadow-sm"
+            >
+              <span className="text-sm font-medium text-primary">Need to talk? Chat with Ava</span>
+              <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-primary" />
+              </div>
+            </button>
+          </div>
         </section>
       </div>
       <audio
@@ -850,7 +893,7 @@ const MentalHealth = () => {
           >
             {/* Header placeholder */}
             <div className="w-full p-8 flex justify-center">
-              <span className="text-white/40 text-xs font-light tracking-[0.2em] uppercase">Nivi Quantum Interface</span>
+              <span className="text-white/40 text-xs font-light tracking-[0.2em] uppercase">Ava Quantum Interface</span>
             </div>
 
             {/* Quantum Aura Orb */}

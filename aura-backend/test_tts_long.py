@@ -3,7 +3,7 @@ import edge_tts
 import time
 
 async def main():
-    text = "Hello. I'm Nivi. Welcome to this quiet space. How are your mind and body feeling right now? Take a deep breath and let's get started on your wellness journey. I am here to help you achieve your goals."
+    text = "Hello. I'm Ava. Welcome to this quiet space. How are your mind and body feeling right now? Take a deep breath and let's get started on your wellness journey. I am here to help you achieve your goals."
     voice = "en-US-EmmaNeural"
     
     start = time.time()
