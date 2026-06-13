@@ -101,6 +101,23 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
     d2.setHours(0, 0, 0, 0);
     const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24));
 
+    const getPercentage = (logged, target) => Math.min(Math.max(((logged || 0) / (target || 1)) * 100, 0), 100) || 0;
+    const waterP = getPercentage(updatedGoals.waterLogged, updatedGoals.waterTarget);
+    const dietP = getPercentage(updatedGoals.calorieLogged, updatedGoals.calorieTarget);
+    const focusP = getPercentage(updatedGoals.focusLogged, updatedGoals.focusTarget);
+    const wCount = (updatedGoals.completedExerciseIds || []).length;
+    const workoutP = Math.min((wCount / 4) * 100, 100);
+    const mentalP = updatedGoals.mentalLogged ? 100 : 0;
+    
+    const progress = (waterP + dietP + focusP + workoutP + mentalP) / 5;
+    
+    let status = 'rest';
+    if (progress > 0 && progress < 100) {
+      status = 'partial';
+    } else if (progress >= 100) {
+      status = 'complete';
+    }
+
     const activityDone =
       (updatedGoals.waterLogged || 0) > 0 ||
       (updatedGoals.calorieLogged || 0) > 0 ||
@@ -114,7 +131,9 @@ const applyActivity = (state, goalUpdates = {}, userUpdates = {}) => {
     updatedHistory.push({
       date: lastDate,
       goals: { ...updatedGoals },
-      streakKept
+      streakKept,
+      progress,
+      status
     });
 
     const historyCutoffDateObj = new Date();

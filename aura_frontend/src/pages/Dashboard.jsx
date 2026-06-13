@@ -125,71 +125,68 @@ const Dashboard = () => {
 
     // Consistency tracking evaluation function
     const evaluateConsistencyStatus = (entry, currentUtcDateStr) => {
-      // Create a shallow copy of the entry state before modifying it
       const entryCopy = { ...entry };
 
-      // Absolute Date Matching: Only target Today if entry date exactly matches current UTC date string
       if (entryCopy.date === currentUtcDateStr) {
-        // Create a shallow copy of dailyGoals state before modifying or evaluating it
         const stateCopy = { ...dailyGoals };
 
-        const wP = stateCopy.waterTarget > 0 ? (stateCopy.waterLogged / stateCopy.waterTarget) : 0;
-        const dP = stateCopy.calorieTarget > 0 ? (stateCopy.calorieLogged / stateCopy.calorieTarget) : 0;
-        const fP = stateCopy.focusTarget > 0 ? (stateCopy.focusLogged / stateCopy.focusTarget) : 0;
+        const getClampedPercentage = (logged, target) =>
+          Math.min(Math.max(((logged || 0) / (target || 1)) * 100, 0), 100) || 0;
 
-        // Logic Isolation: Explicitly verify that progress or completed status is only applied if records have data
-        const hasProgress =
-          wP > 0 ||
-          dP > 0 ||
-          fP > 0 ||
-          (stateCopy.completedExerciseIds && stateCopy.completedExerciseIds.length > 0) ||
-          stateCopy.workoutsCompleted ||
-          stateCopy.mentalLogged;
+        const wP = getClampedPercentage(stateCopy.waterLogged, stateCopy.waterTarget);
+        const dP = getClampedPercentage(stateCopy.calorieLogged, stateCopy.calorieTarget);
+        const fP = getClampedPercentage(stateCopy.focusLogged, stateCopy.focusTarget);
+        const wCount = stateCopy.completedExerciseIds?.length || 0;
+        const workoutP = Math.min((wCount / 4) * 100, 100);
+        const mentalP = stateCopy.mentalLogged ? 100 : 0;
 
-        if (hasProgress) {
-          const streakKept = wP >= 1 && dP >= 1 && fP >= 1 && stateCopy.workoutsCompleted && stateCopy.mentalLogged;
-          if (streakKept) {
-            entryCopy.status = 'full';
-          } else {
-            entryCopy.status = 'partial';
-          }
+        const progress = (wP + dP + fP + workoutP + mentalP) / 5;
+
+        if (progress > 0 && progress < 100) {
+          entryCopy.status = 'partial';
+        } else if (progress >= 100) {
+          entryCopy.status = 'full';
         } else {
-          entryCopy.status = 'none';
+          entryCopy.status = 'rest';
         }
       } else if (entryCopy.date < currentUtcDateStr) {
-        // Evaluate historical archived data for past days in this cycle
         const historyEntry = historyMap[entryCopy.date];
 
-        // Logic Isolation: Verify that the status is only applied if the record for that specific date actually exists and contains data
-        if (historyEntry && historyEntry.goals) {
-          const g = historyEntry.goals;
-          const wP = g.waterTarget > 0 ? (g.waterLogged / g.waterTarget) : 0;
-          const dP = g.calorieTarget > 0 ? (g.calorieLogged / g.calorieTarget) : 0;
-          const fP = g.focusTarget > 0 ? (g.focusLogged / g.focusTarget) : 0;
+        if (historyEntry) {
+          if (historyEntry.status) {
+            if (historyEntry.status === 'complete') entryCopy.status = 'full';
+            else if (historyEntry.status === 'partial') entryCopy.status = 'partial';
+            else entryCopy.status = 'rest';
+          } else if (historyEntry.goals) {
+            // Fallback for older history entries without status
+            const g = historyEntry.goals;
+            const getClampedPercentage = (logged, target) =>
+              Math.min(Math.max(((logged || 0) / (target || 1)) * 100, 0), 100) || 0;
 
-          const hasProgress =
-            wP > 0 ||
-            dP > 0 ||
-            fP > 0 ||
-            (g.completedExerciseIds && g.completedExerciseIds.length > 0) ||
-            g.workoutsCompleted ||
-            g.mentalLogged;
+            const wP = getClampedPercentage(g.waterLogged, g.waterTarget);
+            const dP = getClampedPercentage(g.calorieLogged, g.calorieTarget);
+            const fP = getClampedPercentage(g.focusLogged, g.focusTarget);
+            const wCount = g.completedExerciseIds?.length || 0;
+            const workoutP = Math.min((wCount / 4) * 100, 100);
+            const mentalP = g.mentalLogged ? 100 : 0;
 
-          if (hasProgress) {
-            if (historyEntry.streakKept) {
+            const progress = (wP + dP + fP + workoutP + mentalP) / 5;
+
+            if (progress > 0 && progress < 100) {
+              entryCopy.status = 'partial';
+            } else if (progress >= 100) {
               entryCopy.status = 'full';
             } else {
-              entryCopy.status = 'partial';
+              entryCopy.status = 'rest';
             }
           } else {
-            entryCopy.status = 'none';
+            entryCopy.status = 'rest';
           }
         } else {
-          entryCopy.status = 'none';
+          entryCopy.status = 'rest';
         }
       } else {
-        // Future days in the cycle are marked 'none'
-        entryCopy.status = 'none';
+        entryCopy.status = 'rest';
       }
 
       return entryCopy;
