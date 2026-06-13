@@ -41,6 +41,9 @@ import {
   Loader2,
   Volume2,
   VolumeX,
+  RefreshCcw,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 import useHealthStore from '../store/healthStore';
 import { WEBSOCKET_URL } from '../config/api';
@@ -219,17 +222,24 @@ const PoseAnalyzer = ({
   const [cameraError, setCameraError] = useState(null);
   const [wsError, setWsError] = useState(null);
 
+  // Mobile immersive layout states
+  const [facingMode, setFacingMode] = useState('user');
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // ─────────────────────────────────────────────────────────────────────────
   // 1 · WebRTC camera initialisation
   // ─────────────────────────────────────────────────────────────────────────
 
   const initCamera = useCallback(async () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+    }
     setCameraStatus('loading');
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'user',
+          facingMode: facingMode,
           width: { ideal: 640 },
           height: { ideal: 480 },
           frameRate: { ideal: 30 },
@@ -263,7 +273,19 @@ const PoseAnalyzer = ({
       setCameraError(msg);
       setCameraStatus('denied');
     }
+  }, [facingMode]);
+
+  const toggleCamera = useCallback(() => {
+    setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
   }, []);
+
+  useEffect(() => {
+    // Skip initial mount cycle since bootstrap handles it
+    if (cameraStatus !== 'idle') {
+      initCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facingMode]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 2 · MediaPipe PoseLandmarker initialisation
@@ -700,39 +722,121 @@ const PoseAnalyzer = ({
 
           {/* Feedback pill */}
           <AnimatePresence mode="wait">
-            <motion.div
-              key={feedback}
-              initial={{ opacity: 0, y: -10, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.96 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-max max-w-[90%]"
-            >
-              <div className="bg-[#DCE4E0]/90 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-[0_8px_30px_-8px_rgba(74,107,93,0.2)] flex items-center gap-2 sm:gap-3">
-                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4A6B5D] shrink-0 animate-pulse" />
-                <span className="text-xs sm:text-sm font-medium text-text-primary text-center">
-                  {feedback}
-                </span>
-              </div>
-            </motion.div>
+            {!isExpanded && (
+              <motion.div
+                key={feedback}
+                initial={{ opacity: 0, y: -10, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-max max-w-[90%]"
+              >
+                <div className="bg-[#DCE4E0]/90 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-[0_8px_30px_-8px_rgba(74,107,93,0.2)] flex items-center gap-2 sm:gap-3">
+                  <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#4A6B5D] shrink-0 animate-pulse" />
+                  <span className="text-xs sm:text-sm font-medium text-text-primary text-center">
+                    {feedback}
+                  </span>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Camera feed container */}
-          <div className="relative w-full h-full rounded-[1.25rem] sm:rounded-[1.5rem] overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] border border-border">
+          <div className={`relative w-full h-full overflow-hidden bg-[#2A2A2A] shadow-[0_20px_60px_-15px_rgba(42,42,42,0.15)] transition-all duration-300 ease-out ${isExpanded ? 'fixed inset-0 z-[100] rounded-none border-none' : 'rounded-[1.25rem] sm:rounded-[1.5rem] border border-border'}`}>
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
               className="w-full h-full object-cover"
-              style={{ transform: 'scaleX(-1)' }}
+              style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
 
             <canvas
               ref={canvasRef}
               className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ transform: 'scaleX(-1)' }}
+              style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
             />
+
+            {/* Top Right Actions (Flip & Expand) */}
+            <div className="absolute top-4 right-4 z-50 flex flex-col sm:flex-row items-center gap-3">
+              <button
+                onClick={toggleCamera}
+                className="w-12 h-12 rounded-full bg-black/40 border border-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all shadow-lg"
+              >
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-12 h-12 rounded-full bg-black/40 border border-white/15 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all shadow-lg"
+              >
+                {isExpanded ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {/* Immersive Full-Screen HUDs */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 pointer-events-none z-40 flex flex-col justify-between p-4 sm:p-6 pb-6 sm:pb-8"
+                >
+                  <div className="flex justify-between items-start pt-20">
+                    {/* Top Left HUD: Exercise Info */}
+                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md text-white shadow-xl p-4 rounded-2xl max-w-[220px]">
+                      <div className="flex items-center gap-2 mb-1 opacity-80">
+                        <Activity className="w-4 h-4 text-emerald-400" />
+                        <span className="text-[10px] uppercase tracking-widest font-semibold text-emerald-400">Live Session</span>
+                      </div>
+                      <h3 className="text-lg font-light leading-tight truncate">{exerciseName}</h3>
+                    </div>
+
+                    {/* Top Right HUD: Metrics */}
+                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md text-white shadow-xl p-5 rounded-2xl flex flex-col items-end pointer-events-auto mt-[4.5rem] sm:mt-0">
+                      <p className="text-[10px] uppercase tracking-widest font-semibold opacity-70 mb-1">Repetitions</p>
+                      <div className="text-5xl sm:text-6xl font-bold font-mono tracking-tighter leading-none">
+                        {reps}
+                      </div>
+                      {parsedTargetReps !== null && (
+                        <p className="text-sm font-light opacity-80 mt-2">
+                          of <span className="font-semibold">{parsedTargetReps}</span> target
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Bottom HUD: Form Correction Feedback */}
+                    <div className="bg-neutral-900/40 border border-white/10 backdrop-blur-md shadow-xl p-4 px-6 rounded-2xl max-w-sm w-full mx-auto pointer-events-auto">
+                      <p className="text-xl font-semibold text-center text-emerald-400">{feedback}</p>
+                    </div>
+
+                    {/* Expanded Touch Targets for Distant Interaction */}
+                    <div className="w-full max-w-sm grid grid-cols-1 gap-3 pointer-events-auto mt-2">
+                      {sessionDone ? (
+                        <button
+                          onClick={handleLogAndComplete}
+                          className="h-14 rounded-xl bg-emerald-500 text-white font-semibold tracking-wide hover:bg-emerald-600 transition-colors shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2 className="w-5 h-5" />
+                          Log &amp; Complete Set
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleEndSession}
+                          className="h-14 rounded-xl bg-neutral-900/50 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-neutral-800/60 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <X className="w-5 h-5" />
+                          Abort Session
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Boot loading state */}
             <AnimatePresence>

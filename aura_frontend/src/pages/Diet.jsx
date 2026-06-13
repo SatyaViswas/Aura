@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import useHealthStore from '../store/healthStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Plus, Loader2, Sparkles, Coffee, Sun, Moon, Apple, Flame } from 'lucide-react';
+import { Plus, Loader2, Sparkles, Coffee, Sun, Moon, Apple, Flame, ChevronDown, ChevronUp, Mic, Send, X } from 'lucide-react';
 import { BACKEND_URL } from '../config/api';
 
 const Diet = () => {
@@ -19,6 +19,12 @@ const Diet = () => {
 
   const [aiInput, setAiInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [expandedMeal, setExpandedMeal] = useState(null);
+  const [mobileAiInput, setMobileAiInput] = useState('');
+
+  const [modalMealType, setModalMealType] = useState(null);
+  const [showAiSectionSelector, setShowAiSectionSelector] = useState(false);
+  const [pendingAiPrompt, setPendingAiPrompt] = useState('');
 
   const { calorieLogged, calorieTarget, macroProtein, macroCarbs, macroFat, meals = [] } = dailyGoals;
   const calorieProgress = Math.min((calorieLogged / calorieTarget) * 100, 100) || 0;
@@ -45,6 +51,7 @@ const Diet = () => {
       setProtein('');
       setCarbs('');
       setFats('');
+      setModalMealType(null);
     }
   };
 
@@ -84,13 +91,57 @@ const Diet = () => {
     }
   };
 
+  const handleMobileAiSubmit = async (e) => {
+    e.preventDefault();
+    if (!mobileAiInput.trim()) return;
+
+    setPendingAiPrompt(mobileAiInput);
+    setMobileAiInput('');
+    setShowAiSectionSelector(true);
+  };
+
+  const executeMobileAiLog = async (mealType) => {
+    setShowAiSectionSelector(false);
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/nutrition/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          food_description: pendingAiPrompt,
+          meal_type: mealType
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to parse nutrition');
+
+      const parsedData = await response.json();
+
+      logCalories(
+        parsedData.calories,
+        parsedData.protein,
+        parsedData.carbs,
+        parsedData.fat,
+        parsedData.display_name,
+        mealType
+      );
+    } catch (error) {
+      console.error('AI Log Error:', error);
+    } finally {
+      setIsAnalyzing(false);
+      setPendingAiPrompt('');
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="p-6 md:p-10 lg:p-14 max-w-6xl mx-auto space-y-10"
-    >
+    <>
+      {/* -------------------- DESKTOP LAYOUT -------------------- */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="hidden md:block p-6 md:p-10 lg:p-14 max-w-6xl mx-auto space-y-10"
+      >
       <header className="space-y-2">
         <h1 className="text-3xl md:text-4xl font-light text-text-primary tracking-tight">Nutrition</h1>
         <p className="text-text-secondary text-lg font-light">Fuel your body with intention.</p>
@@ -354,7 +405,7 @@ const Diet = () => {
                             <span className="text-sm font-medium text-text-primary">{meal.c}g</span>
                           </div>
                           <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Fats</span>
+<span className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Fats</span>
                             <span className="text-sm font-medium text-text-primary">{meal.f}g</span>
                           </div>
                         </div>
@@ -367,7 +418,277 @@ const Diet = () => {
           </div>
         )}
       </section>
-    </motion.div>
+      </motion.div>
+
+      {/* -------------------- MOBILE LAYOUT -------------------- */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="block md:hidden p-4 pb-28 space-y-6"
+      >
+        <header className="space-y-1">
+          <h1 className="text-3xl font-light text-text-primary tracking-tight">Nutrition</h1>
+        </header>
+
+        {/* Component 1: Compressed Macro Dashboard */}
+        <section className="bg-surface rounded-3xl p-5 shadow-natural flex items-center gap-6">
+          <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 drop-shadow-sm">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-background" />
+              <circle 
+                cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" 
+                strokeDasharray="283" strokeDashoffset={283 - (283 * calorieProgress / 100)} 
+                className="text-primary transition-all duration-1000 ease-out" 
+                strokeLinecap="round" 
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-text-primary leading-none">{Math.max(0, calorieTarget - calorieLogged)}</span>
+              <span className="text-[10px] text-text-secondary uppercase tracking-wider mt-1">Left</span>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-3">
+            {[
+              { label: 'Protein', value: macroProtein, color: COLORS[0], target: 150 },
+              { label: 'Carbs', value: macroCarbs, color: COLORS[1], target: 250 },
+              { label: 'Fat', value: macroFat, color: COLORS[2], target: 70 }
+            ].map((macro) => (
+              <div key={macro.label} className="space-y-1">
+                <div className="flex justify-between text-xs font-medium">
+                  <span className="text-text-secondary">{macro.label}</span>
+                  <span className="text-text-primary">{macro.value}g</span>
+                </div>
+                <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    style={{ 
+                      width: `${Math.min((macro.value / macro.target) * 100, 100)}%`,
+                      backgroundColor: macro.color 
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Component 2: Collapsible Meal Deck */}
+        <section className="space-y-3">
+          {['Breakfast', 'Lunch', 'Dinner', 'Snacks'].map((mealType) => {
+            const categoryMeals = meals.filter(m => m.type === mealType);
+            const totalCals = categoryMeals.reduce((acc, m) => acc + (m.cals || 0), 0);
+            const isExpanded = expandedMeal === mealType;
+
+            const iconMap = {
+              Breakfast: <Coffee className="w-4 h-4" />,
+              Lunch: <Sun className="w-4 h-4" />,
+              Snacks: <Apple className="w-4 h-4" />,
+              Dinner: <Moon className="w-4 h-4" />
+            };
+
+            return (
+              <div key={mealType} className="bg-surface rounded-2xl overflow-hidden shadow-sm">
+                <button 
+                  onClick={() => setExpandedMeal(isExpanded ? null : mealType)}
+                  className="w-full flex items-center justify-between p-4 min-h-[44px]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-background rounded-xl text-primary">
+                      {iconMap[mealType] || <Flame className="w-4 h-4" />}
+                    </div>
+                    <span className="text-base font-medium text-text-primary">{mealType}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-light text-text-secondary">{totalCals} kcal</span>
+                    {isExpanded ? <ChevronUp className="w-5 h-5 text-text-secondary" /> : <ChevronDown className="w-5 h-5 text-text-secondary" />}
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-border/50"
+                    >
+                      <div className="p-4 space-y-3">
+                        {categoryMeals.length === 0 ? (
+                          <p className="text-sm text-text-secondary/60 text-center py-2 font-light">No items logged</p>
+                        ) : (
+                          categoryMeals.map(meal => (
+                            <div key={meal.id} className="flex justify-between items-center bg-background rounded-xl p-3">
+                              <div>
+                                <p className="text-sm font-medium text-text-primary truncate max-w-[150px]">{meal.name}</p>
+                                <p className="text-[10px] text-text-secondary mt-0.5">
+                                  {meal.p}g P • {meal.c}g C • {meal.f}g F
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1 text-primary bg-primary/10 px-2 py-1 rounded-md min-w-[44px] justify-center min-h-[44px]">
+                                <Flame className="w-3 h-3" />
+                                <span className="text-xs font-semibold">{meal.cals}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                        <button 
+                          onClick={() => { setActiveTab(mealType); setModalMealType(mealType); }}
+                          className="w-full mt-2 py-3 border border-dashed border-primary/30 rounded-xl text-primary text-sm font-medium flex justify-center items-center gap-2 min-h-[44px]"
+                        >
+                          <Plus className="w-4 h-4" /> Add to {mealType}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </section>
+      </motion.div>
+
+      {/* Component 3: Bottom Sticky "Ask Ava" AI Drawer */}
+      <div className="block md:hidden fixed bottom-4 left-4 right-4 z-40">
+        <div 
+          className="border border-border backdrop-blur-xl shadow-2xl rounded-2xl p-3 flex items-center gap-3"
+          style={{ backgroundColor: theme === 'dark' ? 'rgba(38, 38, 38, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}
+        >
+          <form onSubmit={handleMobileAiSubmit} className="flex-1 flex items-center gap-2 relative">
+            <input
+              type="text"
+              placeholder="Ask Ava to log a meal..."
+              value={mobileAiInput}
+              onChange={(e) => setMobileAiInput(e.target.value)}
+              disabled={isAnalyzing}
+              className="flex-1 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 min-h-[44px] text-text-primary placeholder:text-text-secondary"
+              style={{ backgroundColor: theme === 'dark' ? 'rgba(26, 26, 26, 0.5)' : 'rgba(251, 251, 249, 0.5)' }}
+            />
+            {isAnalyzing ? (
+              <Loader2 className="w-5 h-5 animate-spin text-primary absolute right-3" />
+            ) : (
+              <button 
+                type="submit"
+                disabled={!mobileAiInput.trim()}
+                className="w-[44px] h-[44px] shrink-0 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg disabled:opacity-50 transition-opacity"
+              >
+                <Send className="w-4 h-4 ml-0.5" />
+              </button>
+            )}
+          </form>
+        </div>
+      </div>
+
+      {/* -------------------- MODALS (MOBILE) -------------------- */}
+      <AnimatePresence>
+        {showAiSectionSelector && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              className="w-full max-w-md bg-surface border border-border rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl"
+            >
+              <h3 className="text-xl font-medium text-text-primary mb-4 text-center">Which meal is this for?</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => executeMobileAiLog(type)}
+                    className="py-4 rounded-xl bg-background border border-border text-text-primary font-medium hover:border-primary/50 transition-colors"
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={() => { setShowAiSectionSelector(false); setPendingAiPrompt(''); }}
+                className="w-full mt-4 py-3 rounded-xl text-text-secondary font-medium hover:bg-background transition-colors"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {modalMealType && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              className="w-full max-w-md bg-surface border border-border rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-medium text-text-primary">Add to {modalMealType}</h3>
+                <button onClick={() => setModalMealType(null)} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-background transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* AI Smart Log Panel */}
+              <div className="mb-6 space-y-3">
+                <label className="text-sm font-medium text-text-secondary ml-1">AI Smart Log (Beta)</label>
+                <form onSubmit={(e) => { e.preventDefault(); setModalMealType(null); handleAiLogSubmit(e); }} className="flex flex-col gap-3">
+                  <input
+                    type="text"
+                    placeholder="e.g., 2 slices of avocado toast..."
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                    className="w-full px-5 py-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-text-primary transition-all text-sm"
+                    disabled={isAnalyzing}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isAnalyzing || !aiInput.trim()}
+                    className="w-full py-4 bg-primary text-white rounded-xl shadow-lg hover:bg-opacity-90 disabled:opacity-70 flex items-center justify-center gap-2 font-medium"
+                  >
+                    {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing...</> : <><Sparkles className="w-5 h-5" /> Ask AI</>}
+                  </button>
+                </form>
+              </div>
+
+              <div className="relative flex items-center py-2 mb-6">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="flex-shrink-0 mx-4 text-text-secondary text-sm font-light">or log manually</span>
+                <div className="flex-grow border-t border-border"></div>
+              </div>
+
+              <form onSubmit={handleLogMeal} className="flex flex-col gap-5">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-text-secondary ml-1">Description</label>
+                  <input type="text" placeholder="Food name" value={mealName} onChange={(e) => setMealName(e.target.value)} required className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-text-primary" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Calories</label>
+                    <input type="number" placeholder="kcal" value={calories} onChange={(e) => setCalories(e.target.value)} required min="0" className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Protein (g)</label>
+                    <input type="number" placeholder="0" value={protein} onChange={(e) => setProtein(e.target.value)} min="0" className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Carbs (g)</label>
+                    <input type="number" placeholder="0" value={carbs} onChange={(e) => setCarbs(e.target.value)} min="0" className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Fats (g)</label>
+                    <input type="number" placeholder="0" value={fats} onChange={(e) => setFats(e.target.value)} min="0" className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-text-primary" />
+                  </div>
+                </div>
+                <button type="submit" className="w-full mt-2 py-4 bg-primary text-white rounded-xl shadow-lg hover:bg-opacity-90 font-medium flex items-center justify-center gap-2">
+                  <Plus className="w-5 h-5" /> Log {modalMealType}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
