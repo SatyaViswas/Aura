@@ -98,7 +98,7 @@ parso==0.8.5
 passlib==1.7.4
 patsy==1.0.2
 pexpect==4.9.0
-pillow==12.2.0
+pillow==12.3.0
 pipreqs==0.4.13
 platformdirs==4.5.1
 prompt_toolkit==3.0.52
